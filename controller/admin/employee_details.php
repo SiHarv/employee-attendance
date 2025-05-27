@@ -1,4 +1,9 @@
 <?php
+// Enable error reporting for debugging
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
+
 require_once '../../../db/connect.php';
 
 if (!isset($_GET['id']) || empty($_GET['id'])) {
@@ -16,10 +21,14 @@ $query = "SELECT u.*,
          (SELECT status FROM time_log WHERE employee_id = u.id AND DATE(time_in) = CURDATE() LIMIT 1) AS today_status
          FROM users u WHERE u.id = ?";
 
-$stmt = $conn->prepare($query);
-$stmt->bind_param("i", $employee_id);
-$stmt->execute();
-$result = $stmt->get_result();
+$stmt1 = $conn->prepare($query);
+if (!$stmt1) {
+    echo '<div class="alert alert-danger">Database error: ' . htmlspecialchars($conn->error) . '</div>';
+    exit;
+}
+$stmt1->bind_param("i", $employee_id);
+$stmt1->execute();
+$result = $stmt1->get_result();
 
 if ($result->num_rows === 0) {
     echo '<div class="alert alert-danger">Employee not found</div>';
@@ -27,15 +36,20 @@ if ($result->num_rows === 0) {
 }
 
 $employee = $result->fetch_assoc();
+$stmt1->close();
 
 // Get recent attendance records
 $attendance_query = "SELECT time_in, status FROM time_log 
                     WHERE employee_id = ? 
                     ORDER BY time_in DESC LIMIT 7";
-$stmt = $conn->prepare($attendance_query);
-$stmt->bind_param("i", $employee_id);
-$stmt->execute();
-$attendance_result = $stmt->get_result();
+$stmt2 = $conn->prepare($attendance_query);
+if (!$stmt2) {
+    echo '<div class="alert alert-danger">Database error: ' . htmlspecialchars($conn->error) . '</div>';
+    exit;
+}
+$stmt2->bind_param("i", $employee_id);
+$stmt2->execute();
+$attendance_result = $stmt2->get_result();
 
 // Calculate absent days (simplified calculation)
 $registration_date = new DateTime($employee['created_at']);

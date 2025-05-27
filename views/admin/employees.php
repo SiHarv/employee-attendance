@@ -396,9 +396,9 @@ $(document).ready(function() {
             </div>
         `);
         
-        // Load the employee details from the modal file
+        // Load the employee details from the backend controller
         $.ajax({
-            url: 'modals/employee_details.php',
+            url: '../../controller/admin/employee_details.php', // <-- use backend, not modal
             type: 'GET',
             data: { id: employeeId },
             success: function(response) {

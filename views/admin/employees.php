@@ -385,9 +385,46 @@ $(document).ready(function() {
     $('.delete-employee').on('click', function() {
         const employeeId = $(this).data('employee-id');
         const employeeName = $(this).data('employee-name');
-        
         $('#delete_employee_id').val(employeeId);
         $('#delete_employee_name').text(employeeName);
+        $('#deleteEmployeeResult').html('');
+    });
+
+    // Delete Employee AJAX form submission
+    $('#deleteEmployeeForm').on('submit', function(e) {
+        e.preventDefault();
+        var $form = $(this);
+        var $result = $('#deleteEmployeeResult');
+        $result.html('');
+        $.ajax({
+            url: '../../controller/admin/employee_delete.php',
+            type: 'POST',
+            data: $form.serialize(),
+            dataType: 'json',
+            success: function(response) {
+                if (response.status === 'success') {
+                    $result.html('<div class="alert alert-success">' + response.message + '</div>');
+                    setTimeout(function() {
+                        $('#deleteEmployeeModal').modal('hide');
+                        location.reload();
+                    }, 1200);
+                } else {
+                    var debug = response.debug ? response.debug : null;
+                    if (debug) {
+                        console.log('Delete Employee Error:', debug);
+                    }
+                    $result.html('<div class="alert alert-danger">' + response.message + '</div>');
+                }
+            },
+            error: function(xhr) {
+                console.log('Delete Employee AJAX Error:', xhr.status, xhr.statusText, xhr.responseText);
+                var msg = 'Error deleting employee. Please try again.';
+                if (xhr.responseText) {
+                    msg += '<br><pre class="mt-2 small bg-light text-dark p-2 border rounded">' + xhr.responseText + '</pre>';
+                }
+                $result.html('<div class="alert alert-danger">' + msg + '</div>');
+            }
+        });
     });
 
     // Add Employee AJAX form submission

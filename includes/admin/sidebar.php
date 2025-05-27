@@ -6,7 +6,7 @@
         left: 0;
         width: 250px;
         height: calc(100% - 80px); /* Adjust for header height */
-        overflow-y: auto;
+        overflow-y: hidden; /* Remove scrollbar */
         background-color: #343a40;
         color: white;
         z-index: 1040;
@@ -128,11 +128,7 @@
                     <i class="bi bi-gear"></i> Settings
                 </a>
             </li>
-        </ul>
-        
-        <div class="nav-divider"></div>
-        
-        <ul class="nav flex-column">
+            <div class="nav-divider"></div>
             <li class="nav-item">
                 <a class="nav-link" href="../../index.php" target="_blank">
                     <i class="bi bi-box-arrow-up-right"></i> View Frontend

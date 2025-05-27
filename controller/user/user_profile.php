@@ -1,14 +1,16 @@
 <?php
-session_start();
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 require_once '../../db/connect.php';
 
 if (!isset($_SESSION['user_id'])) {
-    header('Location: ../login.php');
+    header('Location: ../../index.php');
     exit();
 }
 
 $user_id = $_SESSION['user_id'];
-$query = "SELECT * FROM users WHERE id = ?";
+$query = "SELECT id, username, email, code, created_at FROM users WHERE id = ?";
 $stmt = $conn->prepare($query);
 $stmt->bind_param("i", $user_id);
 $stmt->execute();
@@ -21,6 +23,15 @@ if ($result->num_rows > 0) {
     exit();
 }
 
+// Generate QR code URL (Google Chart API)
+$qr_data = $user['code'] ? $user['code'] : $user['username'];
+$qr_url = "https://chart.googleapis.com/chart?chs=200x200&cht=qr&chl=" . urlencode($qr_data) . "&chld=L|1";
+
+return [
+    'user' => $user,
+    'qr_url' => $qr_url,
+    'qr_data' => $qr_data
+];
 ?>
 
 <!DOCTYPE html>
@@ -41,6 +52,11 @@ if ($result->num_rows > 0) {
         <p><strong>Email:</strong> <?php echo htmlspecialchars($user['email']); ?></p>
         <p><strong>Status:</strong> <?php echo htmlspecialchars($user['status']); ?></p>
         <a href="edit_profile.php">Edit Profile</a>
+
+        <div class="qr-code">
+            <h2>Your QR Code:</h2>
+            <img src="<?php echo $qr_url; ?>" alt="QR Code">
+        </div>
     </div>
 
     <script src="../../assets/js/user/profile.js"></script>

@@ -8,7 +8,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
     // Validate input
     if (empty($username) || empty($password)) {
-        echo "Username and password are required.";
+        $_SESSION['user_error'] = "Username and password are required.";
+        header("Location: ../../index.php");
         exit;
     }
 
@@ -27,32 +28,14 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             header("Location: ../../views/user/dashboard.php");
             exit;
         } else {
-            echo "Invalid password.";
+            $_SESSION['user_error'] = "Invalid password.";
+            header("Location: ../../index.php");
+            exit;
         }
     } else {
-        echo "User not found.";
+        $_SESSION['user_error'] = "User not found.";
+        header("Location: ../../index.php");
+        exit;
     }
 }
 ?>
-
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="../../assets/css/style.css">
-    <title>User Login</title>
-</head>
-<body>
-    <div class="login-container">
-        <h2>User Login</h2>
-        <form method="POST" action="">
-            <input type="text" name="username" placeholder="Username" required>
-            <input type="password" name="password" placeholder="Password" required>
-            <button type="submit">Login</button>
-        </form>
-        <a href="../../index.php">Login as Admin</a>
-        <a href="../../views/user/attendance.php">Scan QR</a>
-    </div>
-</body>
-</html>

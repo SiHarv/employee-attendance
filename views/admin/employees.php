@@ -157,12 +157,18 @@ $result = $conn->query($query);
         <div class="card shadow mb-4">
             <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
                 <h6 class="m-0 font-weight-bold text-primary">Employee List</h6>
-                <div class="table-searchbar">
-                    <div class="input-group" style="width: 300px;">
-                        <input type="text" id="searchEmployee" class="form-control form-control-sm" placeholder="Search...">
-                        <button class="btn btn-outline-secondary btn-sm" type="button">
-                            <i class="fas fa-search"></i>
-                        </button>
+                <div class="d-flex align-items-center">
+                    <!-- Add Employee Button -->
+                    <button class="btn btn-sm btn-primary me-2" data-bs-toggle="modal" data-bs-target="#addEmployeeModal">
+                        <i class="fas fa-user-plus me-1"></i> Add Employee
+                    </button>
+                    <div class="table-searchbar">
+                        <div class="input-group" style="width: 300px;">
+                            <input type="text" id="searchEmployee" class="form-control form-control-sm" placeholder="Search...">
+                            <button class="btn btn-outline-secondary btn-sm" type="button">
+                                <i class="fas fa-search"></i>
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -259,37 +265,7 @@ $result = $conn->query($query);
 </div>
 
 <!-- Add Employee Modal -->
-<div class="modal fade" id="addEmployeeModal" tabindex="-1" aria-labelledby="addEmployeeModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header bg-primary text-white">
-                <h5 class="modal-title" id="addEmployeeModalLabel">Add Employee</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <form id="addEmployeeForm" action="process_employee.php" method="post">
-                    <input type="hidden" name="action" value="add">
-                    <div class="mb-3">
-                        <label for="add_username" class="form-label">Username</label>
-                        <input type="text" class="form-control" id="add_username" name="username" required>
-                    </div>
-                    <div class="mb-3">
-                        <label for="add_email" class="form-label">Email</label>
-                        <input type="email" class="form-control" id="add_email" name="email" required>
-                    </div>
-                    <div class="mb-3">
-                        <label for="add_password" class="form-label">Password</label>
-                        <input type="password" class="form-control" id="add_password" name="password" required>
-                    </div>
-                </form>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="submit" form="addEmployeeForm" class="btn btn-primary">Add Employee</button>
-            </div>
-        </div>
-    </div>
-</div>
+<?php include __DIR__ . '/modals/modal_employee_add.php'; ?>
 
 <!-- Edit Employee Modal -->
 <div class="modal fade" id="editEmployeeModal" tabindex="-1" aria-labelledby="editEmployeeModalLabel" aria-hidden="true">
@@ -445,6 +421,35 @@ $(document).ready(function() {
         $('#delete_employee_name').text(employeeName);
     });
 
+    // Add Employee AJAX form submission
+    $('#addEmployeeForm').on('submit', function(e) {
+        e.preventDefault();
+        var $form = $(this);
+        var $result = $('#addEmployeeResult');
+        $result.html('');
+        $.ajax({
+            url: '../../controller/admin/employee_add.php',
+            type: 'POST',
+            data: $form.serialize(),
+            dataType: 'json',
+            success: function(response) {
+                if (response.status === 'success') {
+                    $result.html('<div class="alert alert-success">' + response.message + '<br>QR Code: <span class="badge bg-dark">' + response.code + '</span></div>');
+                    $form[0].reset();
+                    setTimeout(function() {
+                        $('#addEmployeeModal').modal('hide');
+                        location.reload();
+                    }, 1200);
+                } else {
+                    $result.html('<div class="alert alert-danger">' + response.message + '</div>');
+                }
+            },
+            error: function(xhr) {
+                $result.html('<div class="alert alert-danger">Error adding employee. Please try again.</div>');
+            }
+        });
+    });
+
     // Pagination logic for employeeTable
     function paginateTable(tableSelector, paginationSelector, rowsPerPage) {
         var $table = $(tableSelector);
@@ -487,7 +492,7 @@ $(document).ready(function() {
     }
 
     // Call pagination for employeeTable, 8 rows per page
-    paginateTable('#employeeTable', '#employeeTablePagination', 8);
+    paginateTable('#employeeTable', '#employeeTablePagination', 7);
 
     // jQuery searchbar for employee table
     $('#searchEmployee').on('keyup', function() {
@@ -496,7 +501,7 @@ $(document).ready(function() {
             var rowText = $(this).text().toLowerCase();
             $(this).toggle(rowText.indexOf(value) > -1);
         });
-        paginateTable('#employeeTable', '#employeeTablePagination', 8);
+        paginateTable('#employeeTable', '#employeeTablePagination', 7);
     });
 
     // If you have search/filter, re-run pagination after filtering
@@ -505,7 +510,7 @@ $(document).ready(function() {
         $('#employeeTable tbody tr').filter(function() {
             $(this).toggle($(this).text().toLowerCase().indexOf(value) > -1);
         });
-        paginateTable('#employeeTable', '#employeeTablePagination', 10);
+        paginateTable('#employeeTable', '#employeeTablePagination', 7);
     });
 });
 </script>

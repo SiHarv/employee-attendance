@@ -4,7 +4,7 @@ ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
 
-require_once '../../../db/connect.php';
+require_once '../../db/connect.php';
 
 if (!isset($_GET['id']) || empty($_GET['id'])) {
     echo '<div class="alert alert-danger">No employee ID provided</div>';
@@ -63,7 +63,6 @@ if ($absent_count < 0) $absent_count = 0;
 // Generate QR code URL
 $qr_code_url = "https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=" . urlencode($employee['code']);
 ?>
-
 <div class="container-fluid p-0">
     <div class="row">
         <div class="col-md-4 text-center">
@@ -79,7 +78,7 @@ $qr_code_url = "https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=" 
         </div>
         
         <div class="col-md-8">
-            <h4><?php echo htmlspecialchars($employee['username']); ?></h4>
+            <h4 class="text-dark"><?php echo htmlspecialchars($employee['username']); ?></h4>
             <p class="text-muted mb-3"><?php echo htmlspecialchars($employee['email']); ?></p>
             
             <!-- Attendance Statistics -->
@@ -120,17 +119,17 @@ $qr_code_url = "https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=" 
             
             <!-- Additional Information -->
             <div class="mt-3 mb-3">
-                <table class="table table-sm">
+                <table class="table table-sm bg-white text-dark">
                     <tr>
-                        <th>Employee ID:</th>
-                        <td><?php echo $employee['id']; ?></td>
+                        <th class="text-dark">Employee ID:</th>
+                        <td class="text-dark"><?php echo $employee['id']; ?></td>
                     </tr>
                     <tr>
-                        <th>QR Code:</th>
+                        <th class="text-dark">QR Code:</th>
                         <td><span class="badge bg-dark"><?php echo htmlspecialchars($employee['code'] ?? 'Not available'); ?></span></td>
                     </tr>
                     <tr>
-                        <th>Today's Status:</th>
+                        <th class="text-dark">Today's Status:</th>
                         <td>
                             <?php if ($employee['today_status']): ?>
                                 <span class="badge <?php echo ($employee['today_status'] === 'present') ? 'bg-success' : 'bg-warning text-dark'; ?>">
@@ -142,8 +141,8 @@ $qr_code_url = "https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=" 
                         </td>
                     </tr>
                     <tr>
-                        <th>Registered:</th>
-                        <td><?php echo date('M d, Y', strtotime($employee['created_at'])); ?></td>
+                        <th class="text-dark">Registered:</th>
+                        <td class="text-dark"><?php echo date('M d, Y', strtotime($employee['created_at'])); ?></td>
                     </tr>
                 </table>
             </div>
@@ -153,22 +152,22 @@ $qr_code_url = "https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=" 
     <!-- Recent Attendance History -->
     <div class="row mt-2">
         <div class="col-12">
-            <h5 class="border-bottom pb-2">Recent Attendance</h5>
+            <h5 class="border-bottom pb-2 text-dark">Recent Attendance</h5>
             <?php if ($attendance_result->num_rows > 0): ?>
                 <div class="table-responsive">
-                    <table class="table table-sm table-striped table-hover">
-                        <thead>
+                    <table class="table table-sm table-striped table-hover bg-white text-dark">
+                        <thead class="bg-light text-dark">
                             <tr>
-                                <th>Date</th>
-                                <th>Time In</th>
-                                <th>Status</th>
+                                <th class="text-dark">Date</th>
+                                <th class="text-dark">Time In</th>
+                                <th class="text-dark">Status</th>
                             </tr>
                         </thead>
                         <tbody>
                             <?php while($row = $attendance_result->fetch_assoc()): ?>
                                 <tr>
-                                    <td><?php echo date('M d, Y (D)', strtotime($row['time_in'])); ?></td>
-                                    <td><?php echo date('h:i A', strtotime($row['time_in'])); ?></td>
+                                    <td class="text-dark"><?php echo date('M d, Y (D)', strtotime($row['time_in'])); ?></td>
+                                    <td class="text-dark"><?php echo date('h:i A', strtotime($row['time_in'])); ?></td>
                                     <td>
                                         <span class="badge <?php echo ($row['status'] === 'present') ? 'bg-success' : 'bg-warning text-dark'; ?>">
                                             <?php echo ucfirst($row['status']); ?>

@@ -1,0 +1,92 @@
+body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+    background-color: #f4f4f4;
+}
+
+header {
+    background: #35424a;
+    color: #ffffff;
+    padding: 10px 0;
+    text-align: center;
+}
+
+h1 {
+    margin: 0;
+}
+
+.container {
+    width: 80%;
+    margin: auto;
+    overflow: hidden;
+}
+
+.sidebar {
+    float: left;
+    width: 20%;
+    background: #35424a;
+    color: #ffffff;
+    padding: 15px;
+}
+
+.sidebar a {
+    color: #ffffff;
+    text-decoration: none;
+    display: block;
+    padding: 10px;
+}
+
+.sidebar a:hover {
+    background: #e8491d;
+}
+
+.content {
+    float: right;
+    width: 75%;
+    padding: 15px;
+    background: #ffffff;
+}
+
+footer {
+    background: #35424a;
+    color: #ffffff;
+    text-align: center;
+    padding: 10px 0;
+    position: relative;
+    bottom: 0;
+    width: 100%;
+}
+
+.btn {
+    display: inline-block;
+    font-size: 16px;
+    color: #ffffff;
+    background: #35424a;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+.btn:hover {
+    background: #e8491d;
+}
+
+.error {
+    color: #ff0000;
+    padding: 10px;
+    margin: 10px 0;
+    background-color: #ffe6e6;
+    border: 1px solid #ff0000;
+    border-radius: 4px;
+}
+
+.success {
+    color: #008000;
+    padding: 10px;
+    margin: 10px 0;
+    background-color: #e6ffe6;
+    border: 1px solid #008000;
+    border-radius: 4px;
+}

@@ -155,20 +155,22 @@ $result = $conn->query($query);
             </div>
         </div>
         <div class="card shadow mb-4">
-            <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
-                <h6 class="m-0 font-weight-bold text-primary">Employee List</h6>
-                <div class="d-flex align-items-center">
-                    <!-- Add Employee Button -->
-                    <button class="btn btn-sm btn-primary me-2" data-bs-toggle="modal" data-bs-target="#addEmployeeModal">
+            <div class="card-header py-3">
+                <div class="d-flex flex-row align-items-center justify-content-between">
+                    <h6 class="m-0 font-weight-bold text-primary">Employee List</h6>
+                </div>
+                <!-- Add Employee Button above the searchbar, aligned right -->
+                <div class="d-flex justify-content-end align-items-center mt-3 mb-2">
+                    <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#addEmployeeModal">
                         <i class="fas fa-user-plus me-1"></i> Add Employee
                     </button>
-                    <div class="table-searchbar">
-                        <div class="input-group" style="width: 300px;">
-                            <input type="text" id="searchEmployee" class="form-control form-control-sm" placeholder="Search...">
-                            <button class="btn btn-outline-secondary btn-sm" type="button">
-                                <i class="fas fa-search"></i>
-                            </button>
-                        </div>
+                </div>
+                <div class="table-searchbar">
+                    <div class="input-group" style="width: 300px;">
+                        <input type="text" id="searchEmployee" class="form-control form-control-sm" placeholder="Search...">
+                        <button class="btn btn-outline-secondary btn-sm" type="button">
+                            <i class="fas fa-search"></i>
+                        </button>
                     </div>
                 </div>
             </div>

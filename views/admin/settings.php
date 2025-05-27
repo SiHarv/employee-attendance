@@ -89,6 +89,17 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                                             value="<?php echo isset($settings['qr_pin']) ? htmlspecialchars($settings['qr_pin']) : ''; ?>" autocomplete="off">
                                         <small class="text-muted">Set or change the QR Pin (hidden)</small>
                                     </div>
+                                    <div class="mb-4">
+                                        <label class="form-label fw-bold">QR Scanner Active</label>
+                                        <div class="form-check form-switch">
+                                            <input class="form-check-input" type="checkbox" id="qrActiveSwitch" name="qr_active" value="1"
+                                                <?php echo (isset($settings['qr_active']) && $settings['qr_active']) ? 'checked' : ''; ?>>
+                                            <label class="form-check-label" for="qrActiveSwitch">
+                                                <?php echo (isset($settings['qr_active']) && $settings['qr_active']) ? 'Active' : 'Inactive'; ?>
+                                            </label>
+                                        </div>
+                                        <small class="text-muted">Enable or disable QR code scanner for attendance</small>
+                                    </div>
                                     <div class="d-grid gap-2">
                                         <button type="submit" class="btn btn-primary btn-lg">Save Settings</button>
                                     </div>
@@ -231,6 +242,10 @@ document.getElementById('attendanceSettingsForm').addEventListener('submit', fun
     e.preventDefault();
     const form = e.target;
     const formData = new FormData(form);
+    // Ensure unchecked checkbox sends 0
+    if (!document.getElementById('qrActiveSwitch').checked) {
+        formData.set('qr_active', '0');
+    }
     fetch('../../controller/admin/admin_settings.php', {
         method: 'POST',
         body: formData

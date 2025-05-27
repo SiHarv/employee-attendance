@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: May 27, 2025 at 06:58 PM
+-- Generation Time: May 27, 2025 at 07:16 PM
 -- Server version: 10.4.28-MariaDB
 -- PHP Version: 8.2.4
 
@@ -32,7 +32,6 @@ CREATE TABLE `admin` (
   `username` varchar(50) NOT NULL,
   `password` varchar(255) NOT NULL,
   `email` varchar(100) NOT NULL,
-  `qr_pin` varchar(255) NOT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
@@ -40,8 +39,8 @@ CREATE TABLE `admin` (
 -- Dumping data for table `admin`
 --
 
-INSERT INTO `admin` (`id`, `username`, `password`, `email`, `qr_pin`, `created_at`) VALUES
-(2, 'admin', '$2y$10$u01qTOMsueXPlwyIfojzqe6g.Zi3SW.omO.lkt96lb4T2lSIvJKmu', 'admin@example.com', '', '2025-05-26 14:59:51');
+INSERT INTO `admin` (`id`, `username`, `password`, `email`, `created_at`) VALUES
+(2, 'admin', '$2y$10$u01qTOMsueXPlwyIfojzqe6g.Zi3SW.omO.lkt96lb4T2lSIvJKmu', 'admin@example.com', '2025-05-26 14:59:51');
 
 -- --------------------------------------------------------
 
@@ -53,15 +52,17 @@ CREATE TABLE `settings` (
   `id` int(11) NOT NULL,
   `time_in` time NOT NULL,
   `threshold_minute` int(11) NOT NULL,
-  `time_out` time NOT NULL
+  `time_out` time NOT NULL,
+  `qr_pin` varchar(255) NOT NULL,
+  `qr_active` tinyint(1) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `settings`
 --
 
-INSERT INTO `settings` (`id`, `time_in`, `threshold_minute`, `time_out`) VALUES
-(1, '10:00:00', 15, '17:00:00');
+INSERT INTO `settings` (`id`, `time_in`, `threshold_minute`, `time_out`, `qr_pin`, `qr_active`) VALUES
+(1, '10:00:00', 15, '17:00:00', '1234', 0);
 
 -- --------------------------------------------------------
 

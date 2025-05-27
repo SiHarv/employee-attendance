@@ -54,13 +54,14 @@ require_once '../../includes/user/header.php';
                                     <th>Date</th>
                                     <th>Time In</th>
                                     <th>Time Out</th>
+                                    <th>Total Hours</th>
                                     <th>Status</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <?php if (empty($attendance)): ?>
                                     <tr>
-                                        <td colspan="4" class="text-center text-muted">No attendance records found.</td>
+                                        <td colspan="5" class="text-center text-muted">No attendance records found.</td>
                                     </tr>
                                 <?php else: ?>
                                     <?php foreach ($attendance as $row): ?>
@@ -68,6 +69,7 @@ require_once '../../includes/user/header.php';
                                             <td><?php echo htmlspecialchars($row['date']); ?></td>
                                             <td><?php echo htmlspecialchars($row['time_in']); ?></td>
                                             <td><?php echo htmlspecialchars($row['time_out'] ?? '-'); ?></td>
+                                            <td><?php echo htmlspecialchars($row['total_hours']); ?></td>
                                             <td>
                                                 <?php
                                                     $badge = 'secondary';

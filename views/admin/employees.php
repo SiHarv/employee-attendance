@@ -12,6 +12,20 @@
     <script src="../../assets/js/lib/bootstrap.bundle.min.js"></script>
     <script src="../../assets/js/lib/sweetalert2.all.min.js"></script>
     <style>
+        /* Prevent page scrolling */
+        html, body {
+            overflow: hidden !important;
+            height: 100%;
+        }
+        body {
+            position: relative;
+        }
+        /* Allow scrolling only inside table-responsive if needed */
+        .table-responsive {
+            max-height: 80vh;
+            min-height: 300px;
+            overflow-y: auto;
+        }
         .qr-code-container {
             text-align: center;
             margin-top: 15px;
@@ -20,75 +34,60 @@
             max-width: 100px;
             margin-bottom: 5px;
         }
+        /* Align search bar to the right */
+        .table-searchbar {
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+        }
     </style>
 </head>
 <body>
 
 <?php
-// Start the session
 session_start();
 
-// Check if user is logged in as admin
+// Check if admin is logged in
 if (!isset($_SESSION['admin_id'])) {
-    header("Location: login.php");
+    header('Location: login.php');
     exit();
 }
 
+// Include database connection
+require_once '../../db/connect.php';
 require_once '../../includes/admin/header.php';
 require_once '../../includes/admin/sidebar.php';
-require_once '../../db/connect.php';
 
-// Fetch all employees from the database
-$query = "SELECT * FROM users WHERE id != 1 ORDER BY username";
+// Get totals for summary cards
+$totalEmployees = $conn->query("SELECT COUNT(*) AS count FROM users")->fetch_assoc()['count'];
+
+$today = date('Y-m-d');
+$presentQuery = "SELECT COUNT(*) AS count FROM time_log WHERE DATE(time_in) = ? AND status = 'present'";
+$stmtPresent = $conn->prepare($presentQuery);
+$stmtPresent->bind_param("s", $today);
+$stmtPresent->execute();
+$presentToday = $stmtPresent->get_result()->fetch_assoc()['count'];
+
+$lateQuery = "SELECT COUNT(*) AS count FROM time_log WHERE DATE(time_in) = ? AND status = 'late'";
+$stmtLate = $conn->prepare($lateQuery);
+$stmtLate->bind_param("s", $today);
+$stmtLate->execute();
+$lateToday = $stmtLate->get_result()->fetch_assoc()['count'];
+
+$absentToday = $totalEmployees - ($presentToday + $lateToday);
+if($absentToday < 0) $absentToday = 0;
+
+// Fetch all employees
+$query = "SELECT u.*, 
+         (SELECT COUNT(*) FROM time_log WHERE employee_id = u.id) AS attendance_count,
+         (SELECT status FROM time_log WHERE employee_id = u.id AND DATE(time_in) = CURDATE() LIMIT 1) AS today_status
+         FROM users u ORDER BY created_at DESC";
 $result = $conn->query($query);
-
-// Count statistics
-$total_employees = $result ? $result->num_rows : 0;
-$active_employees = 0;
-$new_employees = 0;
-$inactive_employees = 0;
-
-// Calculate statistics
-$current_month = date('Y-m');
-if($result && $result->num_rows > 0) {
-    $employees = $result->fetch_all(MYSQLI_ASSOC);
-    foreach($employees as $employee) {
-        // Count employees registered in current month as "new"
-        if (substr($employee['created_at'], 0, 7) === $current_month) {
-            $new_employees++;
-        }
-        $active_employees++; // Placeholder: all active
-    }
-    $inactive_employees = $total_employees - $active_employees;
-    // Reset result pointer for display loop
-    $result->data_seek(0);
-}
 ?>
 
 <div class="main-content">
     <div class="container-fluid mt-4">
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h2 class="mb-0 fw-bold text-primary">Employee Management</h2>
-            <button class="btn btn-primary d-flex align-items-center" data-bs-toggle="modal" data-bs-target="#addEmployeeModal">
-                <i class="fas fa-plus-circle me-2"></i>Add Employee
-            </button>
-        </div>
-
-        <?php if (isset($_SESSION['success_message'])): ?>
-            <div class="alert alert-success alert-dismissible fade show">
-                <?php echo $_SESSION['success_message']; unset($_SESSION['success_message']); ?>
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            </div>
-        <?php endif; ?>
-        
-        <?php if (isset($_SESSION['error_message'])): ?>
-            <div class="alert alert-danger alert-dismissible fade show">
-                <?php echo $_SESSION['error_message']; unset($_SESSION['error_message']); ?>
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            </div>
-        <?php endif; ?>
-        
-        <!-- Statistics Cards -->
+        <!-- Employee Stats Cards -->
         <div class="row mb-4">
             <div class="col-xl-3 col-md-6 mb-4">
                 <div class="card border-left-primary shadow h-100 py-2">
@@ -97,7 +96,7 @@ if($result && $result->num_rows > 0) {
                             <div class="col mr-2">
                                 <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
                                     Total Employees</div>
-                                <div class="h5 mb-0 font-weight-bold text-gray-800"><?php echo $total_employees; ?></div>
+                                <div class="h5 mb-0 font-weight-bold text-gray-800"><?php echo $totalEmployees; ?></div>
                             </div>
                             <div class="col-auto">
                                 <i class="fas fa-users fa-2x text-gray-300"></i>
@@ -106,118 +105,136 @@ if($result && $result->num_rows > 0) {
                     </div>
                 </div>
             </div>
-            
             <div class="col-xl-3 col-md-6 mb-4">
                 <div class="card bg-success text-white shadow h-100 py-2">
                     <div class="card-body">
                         <div class="row no-gutters align-items-center">
                             <div class="col mr-2">
-                                <div class="text-xs font-weight-bold text-uppercase mb-1">Active Employees</div>
-                                <div class="h5 mb-0 font-weight-bold"><?php echo $active_employees; ?></div>
+                                <div class="text-xs font-weight-bold text-uppercase mb-1">
+                                    Present Today</div>
+                                <div class="h5 mb-0 font-weight-bold"><?php echo $presentToday; ?></div>
                             </div>
                             <div class="col-auto">
-                                <i class="fas fa-user-check fa-2x"></i>
+                                <i class="fas fa-check-circle fa-2x"></i>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
-            
             <div class="col-xl-3 col-md-6 mb-4">
-                <div class="card bg-info text-white shadow h-100 py-2">
+                <div class="card bg-danger text-white shadow h-100 py-2">
                     <div class="card-body">
                         <div class="row no-gutters align-items-center">
                             <div class="col mr-2">
-                                <div class="text-xs font-weight-bold text-uppercase mb-1">New This Month</div>
-                                <div class="h5 mb-0 font-weight-bold"><?php echo $new_employees; ?></div>
+                                <div class="text-xs font-weight-bold text-uppercase mb-1">
+                                    Absent Today</div>
+                                <div class="h5 mb-0 font-weight-bold"><?php echo $absentToday; ?></div>
                             </div>
                             <div class="col-auto">
-                                <i class="fas fa-user-plus fa-2x"></i>
+                                <i class="fas fa-times-circle fa-2x"></i>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
-            
             <div class="col-xl-3 col-md-6 mb-4">
-                <div class="card bg-secondary text-white shadow h-100 py-2">
+                <div class="card bg-warning text-white shadow h-100 py-2">
                     <div class="card-body">
                         <div class="row no-gutters align-items-center">
                             <div class="col mr-2">
-                                <div class="text-xs font-weight-bold text-uppercase mb-1">Inactive</div>
-                                <div class="h5 mb-0 font-weight-bold"><?php echo $inactive_employees; ?></div>
+                                <div class="text-xs font-weight-bold text-uppercase mb-1">
+                                    Late Today</div>
+                                <div class="h5 mb-0 font-weight-bold"><?php echo $lateToday; ?></div>
                             </div>
                             <div class="col-auto">
-                                <i class="fas fa-user-times fa-2x"></i>
+                                <i class="fas fa-clock fa-2x"></i>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
-        
-        <!-- Employee List -->
-        <div class="card shadow border-0 mb-4">
-            <div class="card-header bg-white py-3 border-0">
-                <div class="row align-items-center">
-                    <div class="col">
-                        <h6 class="m-0 font-weight-bold text-primary">Employee List</h6>
-                    </div>
-                    <div class="col-auto">
-                        <div class="input-group">
-                            <input type="text" class="form-control" placeholder="Search..." id="searchEmployee">
-                            <button class="btn btn-outline-secondary" type="button">
-                                <i class="fas fa-search"></i>
-                            </button>
-                        </div>
+        <div class="card shadow mb-4">
+            <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                <h6 class="m-0 font-weight-bold text-primary">Employee List</h6>
+                <div class="table-searchbar">
+                    <div class="input-group" style="width: 300px;">
+                        <input type="text" id="searchEmployee" class="form-control form-control-sm" placeholder="Search...">
+                        <button class="btn btn-outline-secondary btn-sm" type="button">
+                            <i class="fas fa-search"></i>
+                        </button>
                     </div>
                 </div>
             </div>
             <div class="card-body">
                 <div class="table-responsive">
-                    <table class="table table-hover align-middle" id="employeeTable">
+                    <table class="table" id="employeeTable" width="100%" cellspacing="0" style="border-radius: 6px; overflow: hidden;">
                         <thead>
-                            <tr>
-                                <th>Username</th>
-                                <th>Email</th>
-                                <th>QR Code</th>
-                                <th>Registered</th>
-                                <th>Actions</th>
+                            <tr style="background: #181c1f;">
+                                <th class="text-white">Username</th>
+                                <th class="text-white">Email</th>
+                                <th class="text-white">Today's Status</th>
+                                <th class="text-white">Registered</th>
+                                <th class="text-white">View Details</th>
+                                <th class="text-white">Actions</th>
                             </tr>
                         </thead>
                         <tbody>
                             <?php if ($result && $result->num_rows > 0): ?>
                                 <?php while ($row = $result->fetch_assoc()): ?>
-                                    <tr>
+                                    <tr
+                                        <?php
+                                            // Row coloring for status
+                                            if (isset($row['today_status'])) {
+                                                if ($row['today_status'] === 'present') {
+                                                    echo 'style="background: #d6e6e3;"';
+                                                } elseif ($row['today_status'] === 'late') {
+                                                    echo 'style="background: #fff7df;"';
+                                                } elseif ($row['today_status'] === 'absent') {
+                                                    echo 'style="background: #ffeaea;"';
+                                                }
+                                            }
+                                        ?>
+                                    >
                                         <td><?php echo htmlspecialchars($row['username']); ?></td>
                                         <td><?php echo htmlspecialchars($row['email']); ?></td>
                                         <td class="text-center">
-                                            <?php if (!empty($row['code'])): ?>
-                                                <img src="https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=<?php echo urlencode($row['code']); ?>" 
-                                                    alt="QR Code" class="img-fluid" style="max-width: 80px;">
-                                                <div class="small text-muted mt-1"><?php echo htmlspecialchars($row['code']); ?></div>
-                                                <button class="btn btn-sm btn-outline-primary mt-1 download-qr" 
-                                                        data-code="<?php echo htmlspecialchars($row['code']); ?>"
-                                                        data-username="<?php echo htmlspecialchars($row['username']); ?>">
-                                                    <i class="fas fa-download"></i>
-                                                </button>
-                                            <?php else: ?>
-                                                <span class="text-danger">No QR Code</span>
-                                            <?php endif; ?>
+                                            <?php
+                                            if (isset($row['today_status'])) {
+                                                if ($row['today_status'] === 'present') {
+                                                    echo '<span class="badge bg-success">Present</span>';
+                                                } elseif ($row['today_status'] === 'late') {
+                                                    echo '<span class="badge bg-warning text-dark">Late</span>';
+                                                } elseif ($row['today_status'] === 'absent') {
+                                                    echo '<span class="badge bg-danger">Absent</span>';
+                                                }
+                                            } else {
+                                                echo '<span class="badge bg-danger">Absent</span>';
+                                            }
+                                            ?>
                                         </td>
-                                        <td><?php echo date('Y-m-d', strtotime($row['created_at'])); ?></td>
-                                        <td>
+                                        <td><?php echo date('M d, Y', strtotime($row['created_at'])); ?></td>
+                                        <td class="text-center">
+                                            <button class="btn btn-sm btn-outline-primary view-details" 
+                                                    data-employee-id="<?php echo $row['id']; ?>"
+                                                    data-bs-toggle="modal" 
+                                                    data-bs-target="#employeeDetailsModal">
+                                                View details
+                                            </button>
+                                        </td>
+                                        <td class="text-center">
                                             <div class="btn-group">
-                                                <button class="btn btn-sm btn-warning edit-employee" 
-                                                        data-id="<?php echo $row['id']; ?>"
-                                                        data-username="<?php echo htmlspecialchars($row['username']); ?>"
-                                                        data-email="<?php echo htmlspecialchars($row['email']); ?>"
-                                                        data-code="<?php echo htmlspecialchars($row['code'] ?? ''); ?>">
+                                                <button class="btn btn-sm btn-outline-secondary edit-employee"
+                                                        data-employee-id="<?php echo $row['id']; ?>"
+                                                        data-bs-toggle="modal" 
+                                                        data-bs-target="#editEmployeeModal">
                                                     <i class="fas fa-edit"></i>
                                                 </button>
-                                                <button class="btn btn-sm btn-danger delete-employee" 
-                                                        data-id="<?php echo $row['id']; ?>"
-                                                        data-username="<?php echo htmlspecialchars($row['username']); ?>">
+                                                <button class="btn btn-sm btn-outline-danger delete-employee"
+                                                        data-employee-id="<?php echo $row['id']; ?>"
+                                                        data-employee-name="<?php echo htmlspecialchars($row['username']); ?>"
+                                                        data-bs-toggle="modal" 
+                                                        data-bs-target="#deleteEmployeeModal">
                                                     <i class="fas fa-trash"></i>
                                                 </button>
                                             </div>
@@ -226,12 +243,16 @@ if($result && $result->num_rows > 0) {
                                 <?php endwhile; ?>
                             <?php else: ?>
                                 <tr>
-                                    <td colspan="5" class="text-center">No employees found.</td>
+                                    <td colspan="6" class="text-center">No employees found</td>
                                 </tr>
                             <?php endif; ?>
                         </tbody>
                     </table>
                 </div>
+                <!-- Pagination controls -->
+                <nav>
+                    <ul class="pagination justify-content-center" id="employeeTablePagination"></ul>
+                </nav>
             </div>
         </div>
     </div>
@@ -241,227 +262,250 @@ if($result && $result->num_rows > 0) {
 <div class="modal fade" id="addEmployeeModal" tabindex="-1" aria-labelledby="addEmployeeModalLabel" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="addEmployeeModalLabel">Add New Employee</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="addEmployeeModalLabel">Add Employee</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <form id="addEmployeeForm">
-                <div class="modal-body">
+            <div class="modal-body">
+                <form id="addEmployeeForm" action="process_employee.php" method="post">
+                    <input type="hidden" name="action" value="add">
                     <div class="mb-3">
-                        <label for="username" class="form-label">Username</label>
-                        <input type="text" class="form-control" id="username" name="username" required>
+                        <label for="add_username" class="form-label">Username</label>
+                        <input type="text" class="form-control" id="add_username" name="username" required>
                     </div>
                     <div class="mb-3">
-                        <label for="email" class="form-label">Email</label>
-                        <input type="email" class="form-control" id="email" name="email" required>
+                        <label for="add_email" class="form-label">Email</label>
+                        <input type="email" class="form-control" id="add_email" name="email" required>
                     </div>
                     <div class="mb-3">
-                        <label for="password" class="form-label">Password</label>
-                        <input type="password" class="form-control" id="password" name="password" required>
+                        <label for="add_password" class="form-label">Password</label>
+                        <input type="password" class="form-control" id="add_password" name="password" required>
                     </div>
-                    <div class="mb-3">
-                        <label for="code" class="form-label">QR Code</label>
-                        <div class="input-group">
-                            <input type="text" class="form-control" id="code" name="code" placeholder="Leave empty for auto-generate">
-                            <button class="btn btn-outline-secondary" type="button" id="generateCode">Generate</button>
-                        </div>
-                        <div id="qrPreview" class="qr-code-container mt-3" style="display:none;">
-                            <img id="qrImage" src="" alt="QR Code Preview" class="qr-code-image">
-                        </div>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                    <button type="submit" class="btn btn-primary">Add Employee</button>
-                </div>
-            </form>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="submit" form="addEmployeeForm" class="btn btn-primary">Add Employee</button>
+            </div>
         </div>
     </div>
 </div>
 
 <!-- Edit Employee Modal -->
-<div class="modal fade" id="editEmployeeModal" tabindex="-1" aria-hidden="true">
+<div class="modal fade" id="editEmployeeModal" tabindex="-1" aria-labelledby="editEmployeeModalLabel" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Edit Employee</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            <div class="modal-header bg-secondary text-white">
+                <h5 class="modal-title" id="editEmployeeModalLabel">Edit Employee</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <form action="../../controller/admin/edit_employee.php" method="POST">
-                <input type="hidden" name="id" id="edit_id">
-                <div class="modal-body">
+            <div class="modal-body">
+                <form id="editEmployeeForm" action="process_employee.php" method="post">
+                    <input type="hidden" name="action" value="edit">
+                    <input type="hidden" name="employee_id" id="edit_employee_id">
                     <div class="mb-3">
-                        <label class="form-label">Username</label>
-                        <input type="text" class="form-control" name="username" id="edit_username" required>
+                        <label for="edit_username" class="form-label">Username</label>
+                        <input type="text" class="form-control" id="edit_username" name="username" required>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Email</label>
-                        <input type="email" class="form-control" name="email" id="edit_email" required>
+                        <label for="edit_email" class="form-label">Email</label>
+                        <input type="email" class="form-control" id="edit_email" name="email" required>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">New Password</label>
-                        <input type="password" class="form-control" name="password" id="edit_password">
-                        <div class="form-text">Leave empty to keep current password</div>
+                        <label for="edit_password" class="form-label">Password (leave blank to keep current)</label>
+                        <input type="password" class="form-control" id="edit_password" name="password">
                     </div>
-                    <div class="mb-3">
-                        <label class="form-label">QR Code</label>
-                        <input type="text" class="form-control" name="code" id="edit_code">
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="submit" form="editEmployeeForm" class="btn btn-primary">Update Employee</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Employee Modal -->
+<div class="modal fade" id="deleteEmployeeModal" tabindex="-1" aria-labelledby="deleteEmployeeModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title" id="deleteEmployeeModalLabel">Delete Employee</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete this employee? <strong id="delete_employee_name"></strong></p>
+                <p class="text-danger">This action cannot be undone. All attendance records for this employee will also be deleted.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <form action="process_employee.php" method="post">
+                    <input type="hidden" name="action" value="delete">
+                    <input type="hidden" name="employee_id" id="delete_employee_id">
+                    <button type="submit" class="btn btn-danger">Delete</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Employee Details Modal -->
+<div class="modal fade" id="employeeDetailsModal" tabindex="-1" aria-labelledby="employeeDetailsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-info text-white">
+                <h5 class="modal-title" id="employeeDetailsModalLabel">Employee Details</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="employeeDetailsContent">
+                <div class="text-center">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
                     </div>
+                    <p>Loading employee details...</p>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                    <button type="submit" class="btn btn-primary">Save Changes</button>
-                </div>
-            </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
         </div>
     </div>
 </div>
 
 <script>
-// Handle form submission with AJAX and SweetAlert2
-document.getElementById('addEmployeeForm').addEventListener('submit', function(e) {
-    e.preventDefault();
-    
-    // Get form data
-    const formData = new FormData(this);
-    
-    // Show loading state
-    const submitButton = this.querySelector('button[type="submit"]');
-    const originalText = submitButton.innerHTML;
-    submitButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Adding...';
-    submitButton.disabled = true;
-    
-    // Send AJAX request
-    fetch('../../controller/admin/add_employee.php', {
-        method: 'POST',
-        body: formData,
-        credentials: 'include' // Important: Include cookies for session
-    })
-    .then(response => {
-        console.log('Response status:', response.status);
-        if (!response.ok) {
-            throw new Error('Network response was not ok: ' + response.status);
-        }
-        return response.json();
-    })
-    .then(data => {
-        // Reset button state
-        submitButton.innerHTML = originalText;
-        submitButton.disabled = false;
-        
-        console.log('Server response:', data);
-        
-        if (data.status === 'success') {
-            // Reset the form
-            document.getElementById('addEmployeeForm').reset();
-            document.getElementById('qrPreview').style.display = 'none';
-            
-            // Close the modal
-            bootstrap.Modal.getInstance(document.getElementById('addEmployeeModal')).hide();
-            
-            // Show success message with SweetAlert2
-            Swal.fire({
-                icon: 'success',
-                title: 'Success!',
-                text: data.message,
-                confirmButtonColor: '#28a745'
-            }).then(() => {
-                // Reload the page to show the new employee
-                window.location.reload();
-            });
-        } else {
-            // Show error message with SweetAlert2
-            Swal.fire({
-                icon: 'error',
-                title: 'Error',
-                text: data.message,
-                confirmButtonColor: '#dc3545',
-                footer: data.debug ? '<a href="#" onclick="console.log(' + JSON.stringify(data.debug) + '); return false;">Show debug info in console</a>' : ''
-            });
-        }
-    })
-    .catch(error => {
-        // Reset button state
-        submitButton.innerHTML = originalText;
-        submitButton.disabled = false;
-        
-        console.error('Fetch Error:', error);
-        
-        // Show error message with SweetAlert2
-        Swal.fire({
-            icon: 'error',
-            title: 'Error',
-            text: 'An unexpected error occurred. Please check your session and login status.',
-            confirmButtonColor: '#dc3545'
+$(document).ready(function() {
+    // Employee search functionality
+    $('#searchEmployee').on('keyup', function() {
+        const value = $(this).val().toLowerCase();
+        $('#employeeTable tbody tr').filter(function() {
+            $(this).toggle($(this).text().toLowerCase().indexOf(value) > -1);
         });
     });
-});
 
-// Function to show debug info in console
-function showDebugInfo(debugData) {
-    try {
-        const parsedData = JSON.parse(debugData);
-        console.log('Debug information:', parsedData);
-        alert('Debug information has been logged to the console');
-    } catch (e) {
-        console.error('Failed to parse debug data:', e, debugData);
-        alert('Failed to parse debug data. See console for details.');
-    }
-}
-
-// Generate QR Code
-document.getElementById('generateCode').addEventListener('click', function() {
-    // Generate a unique code (employee ID pattern)
-    const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-    let result = "EMP";
-    for (let i = 0; i < 6; i++) {
-        result += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
-    
-    document.getElementById('code').value = result;
-    
-    // Show QR code preview
-    const qrImage = document.getElementById('qrImage');
-    qrImage.src = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${result}`;
-    
-    document.getElementById('qrPreview').style.display = 'block';
-});
-
-// Download QR code
-document.querySelectorAll('.download-qr').forEach(button => {
-    button.addEventListener('click', function(e) {
-        e.preventDefault();
-        const code = this.getAttribute('data-code');
-        const username = this.getAttribute('data-username');
+    // Load employee details when clicking "View details"
+    $('.view-details').on('click', function() {
+        const employeeId = $(this).data('employee-id');
         
-        // Create temporary link element
-        const link = document.createElement('a');
-        link.href = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${code}`;
-        link.download = `qrcode_${username.replace(/\s+/g, '_')}.png`;
-        link.target = '_blank';
+        // Show loading spinner
+        $('#employeeDetailsContent').html(`
+            <div class="text-center">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <p>Loading employee details...</p>
+            </div>
+        `);
         
-        // Append to document, trigger click and remove
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+        // Load the employee details from the modal file
+        $.ajax({
+            url: 'modals/employee_details.php',
+            type: 'GET',
+            data: { id: employeeId },
+            success: function(response) {
+                $('#employeeDetailsContent').html(response);
+            },
+            error: function() {
+                $('#employeeDetailsContent').html(`
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-circle me-2"></i>
+                        Error loading employee details. Please try again.
+                    </div>
+                `);
+            }
+        });
     });
-});
 
-// Edit employee
-document.querySelectorAll('.edit-employee').forEach(button => {
-    button.addEventListener('click', function() {
-        const id = this.getAttribute('data-id');
-        const username = this.getAttribute('data-username');
-        const email = this.getAttribute('data-email');
-        const code = this.getAttribute('data-code');
+    // Edit employee
+    $('.edit-employee').on('click', function() {
+        const employeeId = $(this).data('employee-id');
         
-        document.getElementById('edit_id').value = id;
-        document.getElementById('edit_username').value = username;
-        document.getElementById('edit_email').value = email;
-        document.getElementById('edit_code').value = code;
-        document.getElementById('edit_password').value = '';
+        // Get employee data via AJAX
+        $.ajax({
+            url: 'get_employee.php',
+            type: 'GET',
+            data: { id: employeeId },
+            dataType: 'json',
+            success: function(employee) {
+                $('#edit_employee_id').val(employee.id);
+                $('#edit_username').val(employee.username);
+                $('#edit_email').val(employee.email);
+            },
+            error: function() {
+                alert('Error fetching employee data');
+            }
+        });
+    });
+
+    // Delete employee
+    $('.delete-employee').on('click', function() {
+        const employeeId = $(this).data('employee-id');
+        const employeeName = $(this).data('employee-name');
         
-        new bootstrap.Modal(document.getElementById('editEmployeeModal')).show();
+        $('#delete_employee_id').val(employeeId);
+        $('#delete_employee_name').text(employeeName);
+    });
+
+    // Pagination logic for employeeTable
+    function paginateTable(tableSelector, paginationSelector, rowsPerPage) {
+        var $table = $(tableSelector);
+        var $rows = $table.find('tbody tr:visible');
+        var totalRows = $rows.length;
+        var totalPages = Math.ceil(totalRows / rowsPerPage);
+
+        function showPage(page) {
+            $rows.hide();
+            $rows.slice((page - 1) * rowsPerPage, page * rowsPerPage).show();
+
+            // Build pagination
+            var $pagination = $(paginationSelector);
+            $pagination.empty();
+
+            if (totalPages <= 1) return;
+
+            var prevDisabled = (page === 1) ? 'disabled' : '';
+            var nextDisabled = (page === totalPages) ? 'disabled' : '';
+
+            $pagination.append('<li class="page-item ' + prevDisabled + '"><a class="page-link" href="#" data-page="' + (page - 1) + '">Prev</a></li>');
+            for (var i = 1; i <= totalPages; i++) {
+                var active = (i === page) ? 'active' : '';
+                $pagination.append('<li class="page-item ' + active + '"><a class="page-link" href="#" data-page="' + i + '">' + i + '</a></li>');
+            }
+            $pagination.append('<li class="page-item ' + nextDisabled + '"><a class="page-link" href="#" data-page="' + (page + 1) + '">Next</a></li>');
+        }
+
+        // Initial page
+        showPage(1);
+
+        // Pagination click
+        $(paginationSelector).off('click').on('click', 'a.page-link', function(e) {
+            e.preventDefault();
+            var page = parseInt($(this).data('page'));
+            if (!isNaN(page) && page >= 1 && page <= totalPages) {
+                showPage(page);
+            }
+        });
+    }
+
+    // Call pagination for employeeTable, 8 rows per page
+    paginateTable('#employeeTable', '#employeeTablePagination', 8);
+
+    // jQuery searchbar for employee table
+    $('#searchEmployee').on('keyup', function() {
+        var value = $(this).val().toLowerCase();
+        $('#employeeTable tbody tr').each(function() {
+            var rowText = $(this).text().toLowerCase();
+            $(this).toggle(rowText.indexOf(value) > -1);
+        });
+        paginateTable('#employeeTable', '#employeeTablePagination', 8);
+    });
+
+    // If you have search/filter, re-run pagination after filtering
+    $('#searchEmployee').on('keyup', function() {
+        var value = $(this).val().toLowerCase();
+        $('#employeeTable tbody tr').filter(function() {
+            $(this).toggle($(this).text().toLowerCase().indexOf(value) > -1);
+        });
+        paginateTable('#employeeTable', '#employeeTablePagination', 10);
     });
 });
 </script>

@@ -270,86 +270,15 @@ $result = $conn->query($query);
 <?php include __DIR__ . '/modals/modal_employee_add.php'; ?>
 
 <!-- Edit Employee Modal -->
-<div class="modal fade" id="editEmployeeModal" tabindex="-1" aria-labelledby="editEmployeeModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header bg-secondary text-white">
-                <h5 class="modal-title" id="editEmployeeModalLabel">Edit Employee</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <form id="editEmployeeForm" action="process_employee.php" method="post">
-                    <input type="hidden" name="action" value="edit">
-                    <input type="hidden" name="employee_id" id="edit_employee_id">
-                    <div class="mb-3">
-                        <label for="edit_username" class="form-label">Username</label>
-                        <input type="text" class="form-control" id="edit_username" name="username" required>
-                    </div>
-                    <div class="mb-3">
-                        <label for="edit_email" class="form-label">Email</label>
-                        <input type="email" class="form-control" id="edit_email" name="email" required>
-                    </div>
-                    <div class="mb-3">
-                        <label for="edit_password" class="form-label">Password (leave blank to keep current)</label>
-                        <input type="password" class="form-control" id="edit_password" name="password">
-                    </div>
-                </form>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="submit" form="editEmployeeForm" class="btn btn-primary">Update Employee</button>
-            </div>
-        </div>
-    </div>
-</div>
+<?php include __DIR__ . '/modals/modal_employee_edit.php'; ?>
 
 <!-- Delete Employee Modal -->
-<div class="modal fade" id="deleteEmployeeModal" tabindex="-1" aria-labelledby="deleteEmployeeModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header bg-danger text-white">
-                <h5 class="modal-title" id="deleteEmployeeModalLabel">Delete Employee</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <p>Are you sure you want to delete this employee? <strong id="delete_employee_name"></strong></p>
-                <p class="text-danger">This action cannot be undone. All attendance records for this employee will also be deleted.</p>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <form action="process_employee.php" method="post">
-                    <input type="hidden" name="action" value="delete">
-                    <input type="hidden" name="employee_id" id="delete_employee_id">
-                    <button type="submit" class="btn btn-danger">Delete</button>
-                </form>
-            </div>
-        </div>
-    </div>
-</div>
+<?php include __DIR__ . '/modals/modal_employee_delete.php'; ?>
 
-<!-- Employee Details Modal -->
-<div class="modal fade" id="employeeDetailsModal" tabindex="-1" aria-labelledby="employeeDetailsModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-lg">
-        <div class="modal-content">
-            <div class="modal-header bg-info text-white">
-                <h5 class="modal-title" id="employeeDetailsModalLabel">Employee Details</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body" id="employeeDetailsContent">
-                <div class="text-center">
-                    <div class="spinner-border text-primary" role="status">
-                        <span class="visually-hidden">Loading...</span>
-                    </div>
-                    <p>Loading employee details...</p>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-            </div>
-        </div>
-    </div>
-</div>
+<!-- Details Employee Modal -->
+<?php include __DIR__ . '/modals/modal_employee_details.php'; ?>
 
+<!-- Delete Employee Modal -->
 <script>
 $(document).ready(function() {
     // Employee search functionality
@@ -396,7 +325,6 @@ $(document).ready(function() {
     // Edit employee
     $('.edit-employee').on('click', function() {
         const employeeId = $(this).data('employee-id');
-        
         // Get employee data via AJAX
         $.ajax({
             url: 'get_employee.php',
@@ -407,9 +335,48 @@ $(document).ready(function() {
                 $('#edit_employee_id').val(employee.id);
                 $('#edit_username').val(employee.username);
                 $('#edit_email').val(employee.email);
+                $('#edit_code').val(employee.code);
             },
-            error: function() {
+            error: function(xhr) {
                 alert('Error fetching employee data');
+            }
+        });
+    });
+
+    // Edit Employee AJAX form submission
+    $('#editEmployeeForm').on('submit', function(e) {
+        e.preventDefault();
+        var $form = $(this);
+        var $result = $('#editEmployeeResult');
+        $result.html('');
+        $.ajax({
+            url: '../../controller/admin/employee_edit.php',
+            type: 'POST',
+            data: $form.serialize(),
+            dataType: 'json',
+            success: function(response) {
+                if (response.status === 'success') {
+                    $result.html('<div class="alert alert-success">' + response.message + '</div>');
+                    setTimeout(function() {
+                        $('#editEmployeeModal').modal('hide');
+                        location.reload();
+                    }, 1200);
+                } else {
+                    var debug = response.debug ? response.debug : null;
+                    if (debug) {
+                        console.log('Edit Employee Error:', debug);
+                    }
+                    $result.html('<div class="alert alert-danger">' + response.message + '</div>');
+                }
+            },
+            error: function(xhr) {
+                // Print the actual error to the browser console
+                console.log('Edit Employee AJAX Error:', xhr.status, xhr.statusText, xhr.responseText);
+                var msg = 'Error updating employee. Please try again.';
+                if (xhr.responseText) {
+                    msg += '<br><pre class="mt-2 small bg-light text-dark p-2 border rounded">' + xhr.responseText + '</pre>';
+                }
+                $result.html('<div class="alert alert-danger">' + msg + '</div>');
             }
         });
     });

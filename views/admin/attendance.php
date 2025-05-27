@@ -99,99 +99,7 @@ if (!isset($_SESSION['admin_id'])) {
         <div class="container-fluid mt-4">
             <div class="content-wrapper">
                 <div class="container-fluid">
-                    <div class="d-flex justify-content-between align-items-center mb-4">
-                        <h2 class="h3">Attendance Records</h2>
-                        
-                        <div>
-                            <a href="../../controller/admin/export_attendance.php?start_date=<?php echo $startDate; ?>&end_date=<?php echo $endDate; ?>&status=<?php echo $status; ?>&employee_id=<?php echo $employeeId; ?>" class="btn btn-success">
-                                <i class="bi bi-file-earmark-excel me-1"></i> Export to Excel
-                            </a>
-                            <button type="button" class="btn btn-info" id="printBtn">
-                                <i class="bi bi-printer me-1"></i> Print Report
-                            </button>
-                        </div>
-                    </div>
-                    
-                    <!-- Report Statistics -->
-                    <div class="row mb-4">
-                        <div class="col-xl-3 col-md-6 mb-4">
-                            <div class="card border-left-primary shadow h-100 py-2">
-                                <div class="card-body">
-                                    <div class="row no-gutters align-items-center">
-                                        <div class="col mr-2">
-                                            <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
-                                                Total Records</div>
-                                            <div class="h5 mb-0 font-weight-bold text-gray-800"><?php echo $totalRecords; ?></div>
-                                        </div>
-                                        <div class="col-auto">
-                                            <i class="bi bi-clipboard-data" style="font-size: 2rem;"></i>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="col-xl-3 col-md-6 mb-4">
-                            <div class="card bg-success text-white shadow h-100 py-2">
-                                <div class="card-body">
-                                    <div class="row no-gutters align-items-center">
-                                        <div class="col mr-2">
-                                            <div class="text-xs font-weight-bold text-uppercase mb-1">
-                                                Present</div>
-                                            <div class="h5 mb-0 font-weight-bold"><?php echo $presentCount; ?></div>
-                                            <div class="mt-1 small">
-                                                <?php echo $totalRecords > 0 ? round(($presentCount / $totalRecords) * 100) : 0; ?>% of total
-                                            </div>
-                                        </div>
-                                        <div class="col-auto">
-                                            <i class="bi bi-check-circle-fill" style="font-size: 2rem;"></i>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="col-xl-3 col-md-6 mb-4">
-                            <div class="card bg-warning text-white shadow h-100 py-2">
-                                <div class="card-body">
-                                    <div class="row no-gutters align-items-center">
-                                        <div class="col mr-2">
-                                            <div class="text-xs font-weight-bold text-uppercase mb-1">
-                                                Late</div>
-                                            <div class="h5 mb-0 font-weight-bold"><?php echo $lateCount; ?></div>
-                                            <div class="mt-1 small">
-                                                <?php echo $totalRecords > 0 ? round(($lateCount / $totalRecords) * 100) : 0; ?>% of total
-                                            </div>
-                                        </div>
-                                        <div class="col-auto">
-                                            <i class="bi bi-clock-history" style="font-size: 2rem;"></i>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="col-xl-3 col-md-6 mb-4">
-                            <div class="card bg-info text-white shadow h-100 py-2">
-                                <div class="card-body">
-                                    <div class="row no-gutters align-items-center">
-                                        <div class="col mr-2">
-                                            <div class="text-xs font-weight-bold text-uppercase mb-1">
-                                                Avg. Hours</div>
-                                            <div class="h5 mb-0 font-weight-bold"><?php echo $avgHours; ?></div>
-                                            <div class="mt-1 small">
-                                                Total: <?php echo round($totalHours, 1); ?> hours
-                                            </div>
-                                        </div>
-                                        <div class="col-auto">
-                                            <i class="bi bi-clock-history" style="font-size: 2rem;"></i>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    
+                    <!-- Report Statistics All cards removed hahaha kapuy -->
                     <!-- Filter Card -->
                     <div class="card shadow mb-4">
                         <div class="card-header py-3 bg-light">
@@ -347,12 +255,55 @@ if (!isset($_SESSION['admin_id'])) {
             $("#reportTable tbody tr").filter(function() {
                 $(this).toggle($(this).text().toLowerCase().indexOf(value) > -1);
             });
+            paginateReportTable(6);
         });
-        
+
         // Print functionality
         $("#printBtn").click(function() {
             window.print();
         });
+
+        // Pagination for Attendance Records Table
+        function paginateReportTable(rowsPerPage) {
+            var $table = $("#reportTable");
+            var $rows = $table.find("tbody tr:visible");
+            var totalRows = $rows.length;
+            var totalPages = Math.ceil(totalRows / rowsPerPage);
+
+            // Remove old pagination
+            $("#attendanceTablePagination").remove();
+
+            if (totalPages <= 1) return;
+
+            // Add pagination controls after the table
+            var $pagination = $('<ul class="pagination justify-content-center mt-3" id="attendanceTablePagination"></ul>');
+            for (var i = 1; i <= totalPages; i++) {
+                $pagination.append('<li class="page-item"><a class="page-link" href="#" data-page="' + i + '">' + i + '</a></li>');
+            }
+            $table.closest('.card').append($pagination);
+
+            function showPage(page) {
+                $rows.hide();
+                $rows.slice((page - 1) * rowsPerPage, page * rowsPerPage).show();
+                $pagination.find('li').removeClass('active');
+                $pagination.find('li').eq(page - 1).addClass('active');
+            }
+
+            // Initial page
+            showPage(1);
+
+            // Pagination click
+            $pagination.on('click', 'a.page-link', function(e) {
+                e.preventDefault();
+                var page = parseInt($(this).data('page'));
+                if (!isNaN(page)) {
+                    showPage(page);
+                }
+            });
+        }
+
+        // Call pagination for Attendance Records Table, 6 rows per page
+        paginateReportTable(6);
     });
     
     function viewDetails(id) {
@@ -397,6 +348,6 @@ if (!isset($_SESSION['admin_id'])) {
     }
     </script>
 
-    <?php require_once '../../includes/admin/footer.php'; ?>
+    <?php //require_once '../../includes/admin/footer.php'; ?>
 </body>
 </html>

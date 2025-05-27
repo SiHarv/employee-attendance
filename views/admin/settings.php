@@ -35,8 +35,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 ?>
     <script src="../../assets/js/lib/bootstrap.bundle.min.js"></script>
     <link rel="stylesheet" href="../../assets/css/bootstrap.min.css">
-    
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <script src="../../assets/js/lib/sweetalert2.all.min.js"></script>
 
 <div class="main-content">
     <div class="container-fluid mt-4">
@@ -63,42 +63,32 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                                 <h3 class="card-title mb-0">Attendance Settings</h3>
                             </div>
                             <div class="card-body p-4">
-                                <?php if (isset($success_message)): ?>
-                                    <div class="alert alert-success alert-dismissible fade show" role="alert">
-                                        <?php echo $success_message; ?>
-                                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                                    </div>
-                                <?php endif; ?>
-                                
-                                <?php if (isset($error_message)): ?>
-                                    <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                                        <?php echo $error_message; ?>
-                                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                                    </div>
-                                <?php endif; ?>
-
-                                <form method="POST" action="" class="needs-validation" novalidate>
+                                <div id="settings-message"></div>
+                                <form id="attendanceSettingsForm" class="needs-validation" novalidate>
                                     <div class="mb-4">
                                         <label class="form-label fw-bold">Time In</label>
                                         <input type="time" class="form-control form-control-lg" name="time_in" 
                                             value="<?php echo $settings['time_in']; ?>" required>
                                         <small class="text-muted">Set the standard time in for employees</small>
                                     </div>
-
                                     <div class="mb-4">
                                         <label class="form-label fw-bold">Late Threshold (minutes)</label>
                                         <input type="number" class="form-control form-control-lg" name="threshold_minute" 
                                             value="<?php echo $settings['threshold_minute']; ?>" required>
                                         <small class="text-muted">Minutes after Time In before marking as Late</small>
                                     </div>
-
                                     <div class="mb-4">
                                         <label class="form-label fw-bold">Time Out</label>
                                         <input type="time" class="form-control form-control-lg" name="time_out" 
                                             value="<?php echo $settings['time_out']; ?>" required>
                                         <small class="text-muted">Set the standard time out for employees</small>
                                     </div>
-
+                                    <div class="mb-4">
+                                        <label class="form-label fw-bold">QR Pin</label>
+                                        <input type="password" class="form-control form-control-lg" name="qr_pin"
+                                            value="<?php echo isset($settings['qr_pin']) ? htmlspecialchars($settings['qr_pin']) : ''; ?>" autocomplete="off">
+                                        <small class="text-muted">Set or change the QR Pin (hidden)</small>
+                                    </div>
                                     <div class="d-grid gap-2">
                                         <button type="submit" class="btn btn-primary btn-lg">Save Settings</button>
                                     </div>
@@ -234,6 +224,37 @@ document.getElementById('exportExcelBtn').addEventListener('click', function(e) 
 
     // Use correct relative path from settings.php to export_attendance.php
     this.setAttribute('href', '../../controller/admin/export_attendance.php?' + params);
+});
+
+// AJAX for Attendance Settings form
+document.getElementById('attendanceSettingsForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const form = e.target;
+    const formData = new FormData(form);
+    fetch('../../controller/admin/admin_settings.php', {
+        method: 'POST',
+        body: formData
+    })
+    .then(res => res.text())
+    .then(data => {
+        if (data.includes('successfully')) {
+            Swal.fire({
+                icon: 'success',
+                title: 'Success',
+                text: data,
+                timer: 2000,
+                showConfirmButton: false
+            });
+        } else {
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: data,
+                timer: 3000,
+                showConfirmButton: false
+            });
+        }
+    });
 });
 </script>
 <?php require_once '../../includes/admin/footer.php'; ?>

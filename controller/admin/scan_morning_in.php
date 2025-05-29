@@ -67,7 +67,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $settings = getSettings($conn);
 
     // Check if employee already logged in today (using DB server date)
-    $stmt = $conn->prepare("SELECT id, time_in, time_out FROM time_log WHERE employee_id = ? AND DATE(time_in) = CURDATE()");
+    $stmt = $conn->prepare("SELECT id, time_in, time_out FROM morning_time_log WHERE employee_id = ? AND DATE(time_in) = CURDATE()");
     $stmt->bind_param("i", $employee_id);
     $stmt->execute();
     $check_result = $stmt->get_result();
@@ -90,7 +90,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 exit;
             } else {
                 // It's time to time out, update the record
-                $stmt2 = $conn->prepare("UPDATE time_log SET time_out = NOW() WHERE id = ?");
+                $stmt2 = $conn->prepare("UPDATE morning_time_log SET time_out = NOW() WHERE id = ?");
                 $stmt2->bind_param("i", $log['id']);
                 if ($stmt2->execute()) {
                     echo json_encode([
@@ -121,7 +121,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     
     // Insert with NOW() and determine status using SQL
     $sql = "
-        INSERT INTO time_log (employee_id, time_in, status)
+        INSERT INTO morning_time_log (employee_id, time_in, status)
         VALUES (
             ?,
             NOW(),
@@ -142,7 +142,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($stmt->execute()) {
         // Get the inserted row for accurate time and status
         $log_id = $stmt->insert_id;
-        $stmt2 = $conn->prepare("SELECT time_in, status FROM time_log WHERE id = ?");
+        $stmt2 = $conn->prepare("SELECT time_in, status FROM morning_time_log WHERE id = ?");
         $stmt2->bind_param("i", $log_id);
         $stmt2->execute();
         $log = $stmt2->get_result()->fetch_assoc();

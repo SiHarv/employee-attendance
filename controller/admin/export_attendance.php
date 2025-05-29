@@ -34,8 +34,8 @@ if (empty($select)) {
     die('No valid columns selected.');
 }
 
-// Build query using time_log and users
-$sql = "SELECT " . implode(", ", $select) . " FROM time_log t LEFT JOIN users u ON t.employee_id = u.id WHERE 1";
+// Build query using morning_time_log and users
+$sql = "SELECT " . implode(", ", $select) . " FROM morning_time_log t LEFT JOIN users u ON t.employee_id = u.id WHERE 1";
 $params = [];
 $types = '';
 if ($date_from) {

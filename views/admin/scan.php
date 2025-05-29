@@ -14,7 +14,7 @@ require_once '../../db/connect.php';
 // Get recent scans for the day
 $today = date('Y-m-d');
 $recent_scans_query = "SELECT tl.*, u.username 
-                      FROM time_log tl 
+                      FROM morning_time_log tl 
                       JOIN users u ON tl.employee_id = u.id 
                       WHERE DATE(tl.time_in) = ? 
                       ORDER BY tl.time_in DESC 
@@ -194,8 +194,8 @@ document.addEventListener('DOMContentLoaded', function() {
     function handleScan(qrCodeData) {
         showScanResult('info', 'Processing QR Code...');
         let url = scanMode === 'in'
-            ? '../../controller/admin/process_in_scan.php'
-            : '../../controller/admin/process_out_scan.php';
+            ? '../../controller/admin/scan_morning_in.php'
+            : '../../controller/admin/scan_morning_out.php';
         fetch(url, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },

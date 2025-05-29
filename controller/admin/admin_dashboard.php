@@ -5,7 +5,7 @@ require_once '../../includes/admin/sidebar.php';
 // Fetch attendance data from the database
 include '../../db/connect.php';
 
-$query = "SELECT * FROM time_log ORDER BY time_in DESC";
+$query = "SELECT * FROM morning_time_log ORDER BY time_in DESC";
 $result = $conn->query($query);
 
 ?>

@@ -33,7 +33,7 @@ function executeAndReport($stmt, $operation) {
 
 // Clear existing data
 echo "<h2>Cleaning existing data...</h2>";
-$conn->query("DELETE FROM time_log");
+$conn->query("DELETE FROM morning_time_log");
 $conn->query("DELETE FROM users WHERE username != 'admin'");
 echo "Existing data cleared.<br><br>";
 
@@ -78,7 +78,7 @@ $threshold_minute = $settings['threshold_minute'];
 // Insert attendance records for the last 7 days
 echo "<br><h2>Inserting attendance records...</h2>";
 
-$insert_log_stmt = $conn->prepare("INSERT INTO time_log (employee_id, time_in, time_out, status) VALUES (?, ?, ?, ?)");
+$insert_log_stmt = $conn->prepare("INSERT INTO morning_time_log (employee_id, time_in, time_out, status) VALUES (?, ?, ?, ?)");
 $insert_log_stmt->bind_param("isss", $employee_id, $time_in, $time_out, $status);
 
 $today = date('Y-m-d');

@@ -20,7 +20,7 @@ $user = $user_result->fetch_assoc();
 
 // Fetch attendance records (exclude empty/zero time_in)
 $stmt = $conn->prepare("SELECT id, DATE(time_in) AS date, TIME(time_in) AS time_in, TIME(time_out) AS time_out, time_in, time_out, status 
-    FROM time_log 
+    FROM morning_time_log 
     WHERE employee_id = ? AND time_in IS NOT NULL AND TIME(time_in) != '00:00:00'
     ORDER BY time_in DESC");
 $stmt->bind_param("i", $user_id);

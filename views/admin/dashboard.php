@@ -105,15 +105,15 @@
     $total_employees = $conn->query($total_employees_query)->fetch_assoc()['total'];
 
     // Count distinct employees present today
-    $present_today_query = "SELECT COUNT(DISTINCT employee_id) as total FROM time_log WHERE DATE(time_in) = CURDATE() AND status = 'present'";
+    $present_today_query = "SELECT COUNT(DISTINCT employee_id) as total FROM morning_time_log WHERE DATE(time_in) = CURDATE() AND status = 'present'";
     $present_today = $conn->query($present_today_query)->fetch_assoc()['total'];
 
     // Count distinct employees late today
-    $late_today_query = "SELECT COUNT(DISTINCT employee_id) as total FROM time_log WHERE DATE(time_in) = CURDATE() AND status = 'late'";
+    $late_today_query = "SELECT COUNT(DISTINCT employee_id) as total FROM morning_time_log WHERE DATE(time_in) = CURDATE() AND status = 'late'";
     $late_today = $conn->query($late_today_query)->fetch_assoc()['total'];
 
     // Count distinct employees who attended today (present or late)
-    $attended_today_query = "SELECT COUNT(DISTINCT employee_id) as count FROM time_log WHERE DATE(time_in) = CURDATE()";
+    $attended_today_query = "SELECT COUNT(DISTINCT employee_id) as count FROM morning_time_log WHERE DATE(time_in) = CURDATE()";
     $attended_today = $conn->query($attended_today_query)->fetch_assoc()['count'];
 
     // Calculate absent employees today
@@ -131,21 +131,21 @@
         $week_days[] = date('D', strtotime($current_date));
         
         // Count employees present on this specific day - using DISTINCT to get accurate counts
-        $present_count_query = "SELECT COUNT(DISTINCT employee_id) as count FROM time_log 
+        $present_count_query = "SELECT COUNT(DISTINCT employee_id) as count FROM morning_time_log 
                                WHERE DATE(time_in) = '$current_date' 
                                AND status = 'present'";
         $present_count = $conn->query($present_count_query)->fetch_assoc()['count'];
         $present_counts[] = $present_count;
         
         // Count employees late on this specific day - using DISTINCT to get accurate counts
-        $late_count_query = "SELECT COUNT(DISTINCT employee_id) as count FROM time_log 
+        $late_count_query = "SELECT COUNT(DISTINCT employee_id) as count FROM morning_time_log 
                             WHERE DATE(time_in) = '$current_date' 
                             AND status = 'late'";
         $late_count = $conn->query($late_count_query)->fetch_assoc()['count'];
         $late_counts[] = $late_count;
         
         // Count employees who attended on this specific day - using DISTINCT to get accurate counts
-        $attended_query = "SELECT COUNT(DISTINCT employee_id) as count FROM time_log 
+        $attended_query = "SELECT COUNT(DISTINCT employee_id) as count FROM morning_time_log 
                            WHERE DATE(time_in) = '$current_date'";
         $attended_count = $conn->query($attended_query)->fetch_assoc()['count'];
         
@@ -162,7 +162,7 @@
     
     // Get today's activity only for the Recent Activity list
     $recent_activity_query = "SELECT t.*, u.username 
-                             FROM time_log t 
+                             FROM morning_time_log t 
                              JOIN users u ON t.employee_id = u.id 
                              WHERE DATE(t.time_in) = '$today'
                              ORDER BY t.time_in DESC 

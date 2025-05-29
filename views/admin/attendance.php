@@ -37,7 +37,7 @@ if (!isset($_SESSION['admin_id'])) {
 
     // Prepare query with filters
     $query = "SELECT t.*, u.username 
-              FROM time_log t 
+              FROM morning_time_log t 
               JOIN users u ON t.employee_id = u.id 
               WHERE 1=1";
     
@@ -153,6 +153,10 @@ if (!isset($_SESSION['admin_id'])) {
                                     </div>
                                     <div class="col-md-6 text-md-end">
                                         <div class="btn-group" role="group">
+                                            <button type="button" class="btn btn-outline-primary" onclick="setDateRange('Morning')">Morning</button>
+                                            <button type="button" class="btn btn-outline-primary" onclick="setDateRange('Afternoon')">Afternoon</button>
+                                        </div>
+                                        <div class="btn-group" role="group">
                                             <button type="button" class="btn btn-outline-primary" onclick="setDateRange('today')">Today</button>
                                             <button type="button" class="btn btn-outline-primary" onclick="setDateRange('yesterday')">Yesterday</button>
                                             <button type="button" class="btn btn-outline-primary" onclick="setDateRange('week')">This Week</button>
@@ -248,7 +252,7 @@ if (!isset($_SESSION['admin_id'])) {
     </div>
 
     <!-- Include the edit modal -->
-    <?php require_once 'modals/modal_edit_attendance.php'; ?>
+    <?php require_once 'modals/modal_edit_morning_attendance.php'; ?>
 
     <script>
     $(document).ready(function() {

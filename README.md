@@ -84,7 +84,7 @@ The application uses a MySQL database with the following tables:
 
 - **users**: Stores employee information.
 - **admin**: Stores admin information.
-- **time_log**: Records attendance with fields for employee ID, time in, time out, and status (present, late, absent).
+- **morning_time_log**: Records attendance with fields for employee ID, time in, time out, and status (present, late, absent).
 - **settings**: Stores application settings such as time in, threshold minutes for late arrivals, and time out.
 
 ## Getting Started

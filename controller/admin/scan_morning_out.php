@@ -71,8 +71,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     $settings = getSettings($conn);
 
-    // Check today's time_log for this employee
-    $stmt = $conn->prepare("SELECT id, time_in, time_out FROM time_log WHERE employee_id = ? AND DATE(time_in) = CURDATE()");
+    // Check today's morning_time_log for this employee
+    $stmt = $conn->prepare("SELECT id, time_in, time_out FROM morning_time_log WHERE employee_id = ? AND DATE(time_in) = CURDATE()");
     $stmt->bind_param("i", $employee_id);
     $stmt->execute();
     $check_result = $stmt->get_result();
@@ -122,11 +122,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     // It's time to time out, update the record
-    $stmt2 = $conn->prepare("UPDATE time_log SET time_out = NOW() WHERE id = ?");
+    $stmt2 = $conn->prepare("UPDATE morning_time_log SET time_out = NOW() WHERE id = ?");
     $stmt2->bind_param("i", $log['id']);
     if ($stmt2->execute()) {
         // Get the actual time_out from database for accurate display
-        $timeQuery = $conn->query("SELECT TIME_FORMAT(time_out, '%H:%i') as formatted_time FROM time_log WHERE id = " . $log['id']);
+        $timeQuery = $conn->query("SELECT TIME_FORMAT(time_out, '%H:%i') as formatted_time FROM morning_time_log WHERE id = " . $log['id']);
         $timeRow = $timeQuery->fetch_assoc();
         $timeOut = $timeRow['formatted_time'];
 

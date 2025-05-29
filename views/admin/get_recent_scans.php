@@ -11,7 +11,7 @@ require_once '../../db/connect.php';
 // Get recent scans for the day
 $today = date('Y-m-d');
 $recent_scans_query = "SELECT tl.*, u.username 
-                      FROM time_log tl 
+                      FROM morning_time_log tl 
                       JOIN users u ON tl.employee_id = u.id 
                       WHERE DATE(tl.time_in) = ? 
                       ORDER BY tl.time_in DESC 

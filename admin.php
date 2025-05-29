@@ -30,14 +30,14 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     }
 
     // Insert attendance log into the database
-    $stmt = $conn->prepare("INSERT INTO time_log (employee_id, time_in, status) VALUES (?, ?, ?)");
+    $stmt = $conn->prepare("INSERT INTO morning_time_log (employee_id, time_in, status) VALUES (?, ?, ?)");
     $stmt->bind_param("iss", $employee_id, $time_in, $status);
     $stmt->execute();
     $stmt->close();
 }
 
 // Fetch attendance logs
-$attendance_query = "SELECT * FROM time_log ORDER BY time_in DESC";
+$attendance_query = "SELECT * FROM morning_time_log ORDER BY time_in DESC";
 $attendance_result = $conn->query($attendance_query);
 ?>
 

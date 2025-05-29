@@ -40,7 +40,7 @@ if (!$employee_id) {
 
 try {
     // Optionally, delete attendance records first if you want to enforce cascading delete
-    $stmt = $conn->prepare("DELETE FROM time_log WHERE employee_id = ?");
+    $stmt = $conn->prepare("DELETE FROM morning_time_log WHERE employee_id = ?");
     if (!$stmt) throw new Exception("Prepare failed: " . $conn->error);
     $stmt->bind_param("i", $employee_id);
     $stmt->execute();

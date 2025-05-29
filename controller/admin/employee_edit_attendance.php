@@ -17,7 +17,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $time_out = $data['time_out'] ?: null;
     $status = $data['status'];
 
-    $stmt = $conn->prepare("UPDATE time_log SET time_in = ?, time_out = ?, status = ? WHERE id = ?");
+    $stmt = $conn->prepare("UPDATE morning_time_log SET time_in = ?, time_out = ?, status = ? WHERE id = ?");
     $stmt->bind_param("sssi", $time_in, $time_out, $status, $attendance_id);
 
     if ($stmt->execute()) {

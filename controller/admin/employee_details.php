@@ -15,10 +15,10 @@ $employee_id = intval($_GET['id']);
 
 // Get employee details
 $query = "SELECT u.*, 
-         (SELECT COUNT(*) FROM time_log WHERE employee_id = u.id) AS attendance_count,
-         (SELECT COUNT(*) FROM time_log WHERE employee_id = u.id AND status = 'present') AS present_count,
-         (SELECT COUNT(*) FROM time_log WHERE employee_id = u.id AND status = 'late') AS late_count,
-         (SELECT status FROM time_log WHERE employee_id = u.id AND DATE(time_in) = CURDATE() LIMIT 1) AS today_status
+         (SELECT COUNT(*) FROM morning_time_log WHERE employee_id = u.id) AS attendance_count,
+         (SELECT COUNT(*) FROM morning_time_log WHERE employee_id = u.id AND status = 'present') AS present_count,
+         (SELECT COUNT(*) FROM morning_time_log WHERE employee_id = u.id AND status = 'late') AS late_count,
+         (SELECT status FROM morning_time_log WHERE employee_id = u.id AND DATE(time_in) = CURDATE() LIMIT 1) AS today_status
          FROM users u WHERE u.id = ?";
 
 $stmt1 = $conn->prepare($query);
@@ -39,7 +39,7 @@ $employee = $result->fetch_assoc();
 $stmt1->close();
 
 // Get recent attendance records
-$attendance_query = "SELECT time_in, status FROM time_log 
+$attendance_query = "SELECT time_in, status FROM morning_time_log 
                     WHERE employee_id = ? 
                     ORDER BY time_in DESC LIMIT 7";
 $stmt2 = $conn->prepare($attendance_query);

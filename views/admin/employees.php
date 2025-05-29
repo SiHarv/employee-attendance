@@ -62,13 +62,13 @@ require_once '../../includes/admin/sidebar.php';
 $totalEmployees = $conn->query("SELECT COUNT(*) AS count FROM users")->fetch_assoc()['count'];
 
 $today = date('Y-m-d');
-$presentQuery = "SELECT COUNT(*) AS count FROM time_log WHERE DATE(time_in) = ? AND status = 'present'";
+$presentQuery = "SELECT COUNT(*) AS count FROM morning_time_log WHERE DATE(time_in) = ? AND status = 'present'";
 $stmtPresent = $conn->prepare($presentQuery);
 $stmtPresent->bind_param("s", $today);
 $stmtPresent->execute();
 $presentToday = $stmtPresent->get_result()->fetch_assoc()['count'];
 
-$lateQuery = "SELECT COUNT(*) AS count FROM time_log WHERE DATE(time_in) = ? AND status = 'late'";
+$lateQuery = "SELECT COUNT(*) AS count FROM morning_time_log WHERE DATE(time_in) = ? AND status = 'late'";
 $stmtLate = $conn->prepare($lateQuery);
 $stmtLate->bind_param("s", $today);
 $stmtLate->execute();
@@ -79,8 +79,8 @@ if($absentToday < 0) $absentToday = 0;
 
 // Fetch all employees
 $query = "SELECT u.*, 
-         (SELECT COUNT(*) FROM time_log WHERE employee_id = u.id) AS attendance_count,
-         (SELECT status FROM time_log WHERE employee_id = u.id AND DATE(time_in) = CURDATE() LIMIT 1) AS today_status
+         (SELECT COUNT(*) FROM morning_time_log WHERE employee_id = u.id) AS attendance_count,
+         (SELECT status FROM morning_time_log WHERE employee_id = u.id AND DATE(time_in) = CURDATE() LIMIT 1) AS today_status
          FROM users u ORDER BY created_at DESC";
 $result = $conn->query($query);
 ?>

@@ -7,12 +7,37 @@ $endDate = isset($_GET['end_date']) ? $_GET['end_date'] : date('Y-m-d');
 $status = isset($_GET['status']) ? $_GET['status'] : 'all';
 $employeeId = isset($_GET['employee_id']) ? $_GET['employee_id'] : '';
 
-// Prepare query with filters
+// Pagination logic
+$page = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
+$rowsPerPage = isset($_GET['rows_per_page']) ? intval($_GET['rows_per_page']) : 6;
+
+// Get total records for pagination
+$countQuery = "SELECT COUNT(*) as total 
+    FROM afternoon_time_log t 
+    JOIN users u ON t.employee_id = u.id 
+    WHERE 1=1";
+if ($startDate) {
+    $countQuery .= " AND DATE(t.time_in) >= '$startDate'";
+}
+if ($endDate) {
+    $countQuery .= " AND DATE(t.time_in) <= '$endDate'";
+}
+if ($status && $status != 'all') {
+    $countQuery .= " AND t.status = '$status'";
+}
+if ($employeeId) {
+    $countQuery .= " AND t.employee_id = $employeeId";
+}
+$countResult = $conn->query($countQuery);
+$totalRecords = $countResult ? intval($countResult->fetch_assoc()['total']) : 0;
+$totalPages = $rowsPerPage > 0 ? ceil($totalRecords / $rowsPerPage) : 1;
+$offset = ($page - 1) * $rowsPerPage;
+
+// Prepare query with filters and pagination
 $query = "SELECT t.*, u.username 
-          FROM morning_time_log t 
+          FROM afternoon_time_log t 
           JOIN users u ON t.employee_id = u.id 
           WHERE 1=1";
-
 if ($startDate) {
     $query .= " AND DATE(t.time_in) >= '$startDate'";
 }
@@ -25,12 +50,11 @@ if ($status && $status != 'all') {
 if ($employeeId) {
     $query .= " AND t.employee_id = $employeeId";
 }
-
 $query .= " ORDER BY t.time_in DESC";
+$query .= " LIMIT $rowsPerPage OFFSET $offset";
 $result = $conn->query($query);
 
 // Calculate statistics
-$totalRecords = $result->num_rows;
 $presentCount = 0;
 $lateCount = 0;
 $absentCount = 0;
@@ -62,17 +86,17 @@ $avgHours = $totalRecords > 0 ? round($totalHours / $totalRecords, 2) : 0;
 <div class="card shadow mb-4">
     <div class="card-header py-3 d-flex justify-content-between align-items-center bg-white">
         <h6 class="m-0 font-weight-bold text-primary">
-            Morning Attendance Records
+            Afternoon Attendance Records
             <span class="text-muted ms-2">(<?php echo $totalRecords; ?> records)</span>
         </h6>
         <div class="input-group" style="width: 250px;">
-            <input type="text" id="searchReport" class="form-control form-control-sm" placeholder="Search...">
+            <input type="text" id="searchAfternoonReport" class="form-control form-control-sm" placeholder="Search...">
             <span class="input-group-text"><i class="bi bi-search"></i></span>
         </div>
     </div>
     <div class="card-body">
-        <div class="table-responsive" id="reportTableContainer">
-            <table class="table table-striped table-hover" id="reportTable">
+        <div class="table-responsive" id="afternoonReportTableContainer">
+            <table class="table table-striped table-hover" id="afternoonReportTable">
                 <thead class="table-dark">
                     <tr>
                         <th>Employee</th>
@@ -131,8 +155,51 @@ $avgHours = $totalRecords > 0 ? round($totalHours / $totalRecords, 2) : 0;
                 </tbody>
             </table>
         </div>
+        <!-- Pagination controls -->
+        <?php if ($totalPages > 1): ?>
+            <nav>
+                <ul class="pagination justify-content-center mt-3">
+                    <?php for ($i = 1; $i <= $totalPages; $i++): ?>
+                        <li class="page-item <?php if ($i == $page) echo 'active'; ?>">
+                            <a class="page-link" href="#" onclick="loadAfternoonAttendancePage(<?php echo $i; ?>); return false;"><?php echo $i; ?></a>
+                        </li>
+                    <?php endfor; ?>
+                </ul>
+            </nav>
+        <?php endif; ?>
     </div>
     <div class="card-footer bg-white text-center">
         <p class="mt-2 mb-2">End of records</p>
     </div>
 </div>
+
+<script>
+function loadAfternoonAttendancePage(page) {
+    // You may need to adjust this AJAX call to fit your actual filtering logic
+    var params = {
+        page: page,
+        rows_per_page: <?php echo $rowsPerPage; ?>,
+        start_date: '<?php echo $startDate; ?>',
+        end_date: '<?php echo $endDate; ?>',
+        status: '<?php echo $status; ?>',
+        employee_id: '<?php echo $employeeId; ?>'
+    };
+    $.get('includes/admin/afternoon_attendance.php', params, function(data) {
+        $('#afternoonReportTableContainer').parent().html(data);
+    });
+}
+
+$(document).ready(function() {
+    // Search functionality for afternoon
+    $("#searchAfternoonReport").on("keyup", function() {
+        var value = $(this).val().toLowerCase();
+        $("#afternoonReportTable tbody tr").filter(function() {
+            $(this).toggle($(this).text().toLowerCase().indexOf(value) > -1);
+        });
+        // Optionally, you can reset pagination or handle client-side pagination here if needed
+    });
+
+    // Remove old client-side pagination JS (paginateAfternoonReportTable) if present
+    // ...existing code...
+});
+</script>

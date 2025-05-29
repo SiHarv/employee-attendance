@@ -23,8 +23,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $threshold_minute = $_POST['threshold_minute'];
     $time_out = $_POST['time_out'];
 
-    $stmt = $conn->prepare("UPDATE settings SET time_in = ?, threshold_minute = ?, time_out = ? WHERE id = 1");
-    $stmt->bind_param("sis", $time_in, $threshold_minute, $time_out);
+    $stmt = $conn->prepare("UPDATE settings SET set_am_time_in = ?, threshold_minute = ?, time_out = ? WHERE id = 1");
+    $stmt->bind_param("sis", $set_am_time_in, $threshold_minute, $time_out);
     
     if ($stmt->execute()) {
         $success_message = "Settings updated successfully!";
@@ -67,8 +67,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                                 <form id="attendanceSettingsForm" class="needs-validation" novalidate>
                                     <div class="mb-4">
                                         <label class="form-label fw-bold">Time In</label>
-                                        <input type="time" class="form-control form-control-lg" name="time_in" 
-                                            value="<?php echo $settings['time_in']; ?>" required>
+                                        <input type="time" class="form-control form-control-lg" name="set_am_time_in" 
+                                            value="<?php echo $settings['set_am_time_in']; ?>" required>
                                         <small class="text-muted">Set the standard time in for employees</small>
                                     </div>
                                     <div class="mb-4">
@@ -154,7 +154,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                                             <label class="form-check-label" for="colDate">Date</label>
                                         </div>
                                         <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" value="time_in" id="colTimeIn" checked>
+                                            <input class="form-check-input" type="checkbox" value="set_am_time_in" id="colTimeIn" checked>
                                             <label class="form-check-label" for="colTimeIn">Time In</label>
                                         </div>
                                         <div class="form-check">
@@ -188,7 +188,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 <script>
 // Add client-side validation if needed
 document.querySelector('form').addEventListener('submit', function(e) {
-    const timeIn = document.querySelector('input[name="time_in"]').value;
+    const timeIn = document.querySelector('input[name="set_am_time_in"]').value;
     const timeOut = document.querySelector('input[name="time_out"]').value;
     const threshold = document.querySelector('input[name="threshold_minute"]').value;
 

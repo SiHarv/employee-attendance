@@ -9,7 +9,7 @@ if (!isset($_SESSION['admin_id'])) {
     exit;
 }
 
-// Morning Edit Attendance Handler
+// Morning & Afternoon Edit Attendance Handler
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $data = json_decode(file_get_contents('php://input'), true);
     
@@ -17,9 +17,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $time_in = $data['time_in'];
     $time_out = $data['time_out'] ?: null;
     $status = $data['status'];
+    $type = isset($data['type']) ? $data['type'] : 'morning';
 
-    $stmt = $conn->prepare("UPDATE morning_time_log SET time_in = ?, time_out = ?, status = ? WHERE id = ?");
-    $stmt->bind_param("sssi", $time_in, $time_out, $status, $attendance_id);
+    if ($type === 'afternoon') {
+        $stmt = $conn->prepare("UPDATE afternoon_time_log SET time_in = ?, time_out = ?, status = ? WHERE id = ?");
+        $stmt->bind_param("sssi", $time_in, $time_out, $status, $attendance_id);
+    } else {
+        $stmt = $conn->prepare("UPDATE morning_time_log SET time_in = ?, time_out = ?, status = ? WHERE id = ?");
+        $stmt->bind_param("sssi", $time_in, $time_out, $status, $attendance_id);
+    }
 
     if ($stmt->execute()) {
         echo json_encode(['success' => true, 'message' => 'Attendance updated successfully']);
@@ -29,8 +35,3 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 } else {
     echo json_encode(['success' => false, 'message' => 'Invalid request method']);
 }
-
-
-// Afternoon Edit Attendance Handler
-//Code for afternoon attendance edit would be similar to the morning one, but using the `afternoon_time_log` table.
-// Note: Ensure to handle the afternoon attendance edit in a similar manner as the morning one.

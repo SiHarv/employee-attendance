@@ -172,180 +172,78 @@ if (!isset($_SESSION['admin_id'])) {
                         <?php require_once '../../includes/admin/morning_attendance.php'; ?>
                     </div>
                     <div id="afternoonAttendanceContainer" style="display:none;">
-                        <!-- Afternoon attendance will be loaded here in the future -->
+                        <?php require_once '../../includes/admin/afternoon_attendance.php'; ?>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Include the edit modal -->
+    <!-- Include the edit modals -->
     <?php require_once 'modals/modal_edit_morning_attendance.php'; ?>
+    <?php require_once 'modals/modal_edit_afternoon_attendance.php'; ?>
 
     <script>
-    $(document).ready(function() {
-        // Search functionality with jQuery
-        $("#searchReport").on("keyup", function() {
-            var value = $(this).val().toLowerCase();
-            $("#reportTable tbody tr").filter(function() {
-                $(this).toggle($(this).text().toLowerCase().indexOf(value) > -1);
-            });
-            paginateReportTable(6);
-        });
 
-        // Print functionality
-        $("#printBtn").click(function() {
-            window.print();
-        });
-
-        // Pagination for Attendance Records Table
-        function paginateReportTable(rowsPerPage) {
-            var $table = $("#reportTable");
-            var $rows = $table.find("tbody tr:visible");
-            var totalRows = $rows.length;
-            var totalPages = Math.ceil(totalRows / rowsPerPage);
-
-            // Remove old pagination
-            $("#attendanceTablePagination").remove();
-
-            if (totalPages <= 1) return;
-
-            // Add pagination controls after the table
-            var $pagination = $('<ul class="pagination justify-content-center mt-3" id="attendanceTablePagination"></ul>');
-            for (var i = 1; i <= totalPages; i++) {
-                $pagination.append('<li class="page-item"><a class="page-link" href="#" data-page="' + i + '">' + i + '</a></li>');
-            }
-            $table.closest('.card').append($pagination);
-
-            function showPage(page) {
-                $rows.hide();
-                $rows.slice((page - 1) * rowsPerPage, page * rowsPerPage).show();
-                $pagination.find('li').removeClass('active');
-                $pagination.find('li').eq(page - 1).addClass('active');
-            }
-
-            // Initial page
-            showPage(1);
-
-            // Pagination click
-            $pagination.on('click', 'a.page-link', function(e) {
-                e.preventDefault();
-                var page = parseInt($(this).data('page'));
-                if (!isNaN(page)) {
-                    showPage(page);
-                }
-            });
-        }
-
-        // Call pagination for Attendance Records Table, 6 rows per page
-        paginateReportTable(6);
-
-        // Button group toggle for Morning/Afternoon
-        $(".btn-group button").on("click", function() {
-            var btnText = $(this).text().trim();
-            if (btnText === "Morning") {
-                $("#morningAttendanceContainer").show();
-                $("#afternoonAttendanceContainer").hide();
-            } else if (btnText === "Afternoon") {
-                $("#morningAttendanceContainer").hide();
-                $("#afternoonAttendanceContainer").show();
-            }
-            // Set active state
-            $(".btn-group button").removeClass("active");
-            $(this).addClass("active");
-        });
-
-        // Set Morning as active by default
-        $(".btn-group button:contains('Morning')").addClass("active");
-        $("#morningAttendanceContainer").show();
-        $("#afternoonAttendanceContainer").hide();
-    });
-    
-    function viewDetails(id) {
-        window.location.href = `attendance_details.php?id=${id}`;
-    }
-
-    function setDateRange(range) {
-        const today = new Date();
-        let startDate = today;
-        let endDate = today;
-        
-        switch(range) {
-            case 'today':
-                // Keep as today
-                break;
-            case 'yesterday':
-                startDate = new Date(today);
-                endDate = new Date(today);
-                startDate.setDate(today.getDate() - 1);
-                endDate.setDate(today.getDate() - 1);
-                break;
-            case 'week':
-                startDate = new Date(today);
-                startDate.setDate(today.getDate() - today.getDay());
-                break;
-            case 'month':
-                startDate = new Date(today.getFullYear(), today.getMonth(), 1);
-                endDate = new Date(today.getFullYear(), today.getMonth() + 1, 0);
-                break;
-        }
-        
-        $('#start_date').val(formatDate(startDate));
-        $('#end_date').val(formatDate(endDate));
-        $('#filterForm').submit();
-    }
-    
-    function formatDate(date) {
-        const year = date.getFullYear();
-        const month = String(date.getMonth() + 1).padStart(2, '0');
-        const day = String(date.getDate()).padStart(2, '0');
-        return `${year}-${month}-${day}`;
-    }
-
-    // Add this to your existing JavaScript
+    // Overwrite editAttendance to handle both morning and afternoon
     function editAttendance(id, name, timeIn, timeOut, status) {
-        document.getElementById('edit_attendance_id').value = id;
-        document.getElementById('edit_employee_name').value = name;
-        document.getElementById('edit_time_in').value = timeIn.replace(' ', 'T');
-        if (timeOut) {
-            document.getElementById('edit_time_out').value = timeOut.replace(' ', 'T');
+        if (window.currentAttendanceType === 'afternoon') {
+            // Afternoon modal
+            document.getElementById('edit_afternoon_attendance_id').value = id;
+            document.getElementById('edit_afternoon_employee_name').value = name;
+            document.getElementById('edit_afternoon_time_in').value = timeIn ? timeIn.replace(' ', 'T') : '';
+            document.getElementById('edit_afternoon_time_out').value = timeOut ? timeOut.replace(' ', 'T') : '';
+            document.getElementById('edit_afternoon_status').value = status;
+            new bootstrap.Modal(document.getElementById('editAfternoonAttendanceModal')).show();
         } else {
-            document.getElementById('edit_time_out').value = '';
+            // Morning modal
+            document.getElementById('edit_attendance_id').value = id;
+            document.getElementById('edit_employee_name').value = name;
+            document.getElementById('edit_time_in').value = timeIn.replace(' ', 'T');
+            if (timeOut) {
+                document.getElementById('edit_time_out').value = timeOut.replace(' ', 'T');
+            } else {
+                document.getElementById('edit_time_out').value = '';
+            }
+            document.getElementById('edit_status').value = status;
+            new bootstrap.Modal(document.getElementById('editAttendanceModal')).show();
         }
-        document.getElementById('edit_status').value = status;
-        
-        new bootstrap.Modal(document.getElementById('editAttendanceModal')).show();
     }
 
-    document.getElementById('saveAttendanceChanges').addEventListener('click', function() {
-        const form = document.getElementById('editAttendanceForm');
-        const formData = {
-            attendance_id: document.getElementById('edit_attendance_id').value,
-            time_in: document.getElementById('edit_time_in').value.replace('T', ' '),
-            time_out: document.getElementById('edit_time_out').value.replace('T', ' '),
-            status: document.getElementById('edit_status').value
-        };
-
-        fetch('../../controller/admin/employee_edit_attendance.php', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(formData)
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                alert('Attendance updated successfully!');
-                window.location.reload();
-            } else {
-                alert('Error: ' + data.message);
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            alert('Error updating attendance');
-        });
+    // Save handler for afternoon attendance
+    document.addEventListener('DOMContentLoaded', function() {
+        var btn = document.getElementById('saveAfternoonAttendanceChanges');
+        if (btn) {
+            btn.addEventListener('click', function() {
+                const formData = {
+                    attendance_id: document.getElementById('edit_afternoon_attendance_id').value,
+                    time_in: document.getElementById('edit_afternoon_time_in').value.replace('T', ' '),
+                    time_out: document.getElementById('edit_afternoon_time_out').value.replace('T', ' '),
+                    status: document.getElementById('edit_afternoon_status').value,
+                    type: 'afternoon'
+                };
+                fetch('../../controller/admin/employee_edit_attendance.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(formData)
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('Attendance updated successfully!');
+                        window.location.reload();
+                    } else {
+                        alert('Error: ' + data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Error updating attendance');
+                });
+            });
+        }
     });
     </script>
 

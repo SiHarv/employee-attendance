@@ -2,21 +2,14 @@
 require_once '../../db/connect.php';
 
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
-    $time_in = $_POST['time_in'];
-    $threshold_minute = $_POST['threshold_minute'];
-    $time_out = $_POST['time_out'];
-    $qr_pin = isset($_POST['qr_pin']) ? $_POST['qr_pin'] : null;
-    $qr_active = isset($_POST['qr_active']) && $_POST['qr_active'] == '1' ? 1 : 0;
+    $set_am_time_in = $_POST['set_am_time_in'];
+    $set_am_time_out = $_POST['set_am_time_out'];
+    $set_pm_time_in = $_POST['set_pm_time_in'];
+    $set_pm_time_out = $_POST['set_pm_time_out'];
 
-    if ($qr_pin !== null && $qr_pin !== '') {
-        $query = "UPDATE settings SET time_in = ?, threshold_minute = ?, time_out = ?, qr_pin = ?, qr_active = ? WHERE id = 1";
-        $stmt = $conn->prepare($query);
-        $stmt->bind_param("sissi", $time_in, $threshold_minute, $time_out, $qr_pin, $qr_active);
-    } else {
-        $query = "UPDATE settings SET time_in = ?, threshold_minute = ?, time_out = ?, qr_active = ? WHERE id = 1";
-        $stmt = $conn->prepare($query);
-        $stmt->bind_param("sisi", $time_in, $threshold_minute, $time_out, $qr_active);
-    }
+    $query = "UPDATE settings SET set_am_time_in = ?, set_am_time_out = ?, set_pm_time_in = ?, set_pm_time_out = ? WHERE id = 1";
+    $stmt = $conn->prepare($query);
+    $stmt->bind_param("ssss", $set_am_time_in, $set_am_time_out, $set_pm_time_in, $set_pm_time_out);
 
     if ($stmt->execute()) {
         echo "Settings updated successfully.";
@@ -26,7 +19,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     exit;
 }
 
-$query = "SELECT time_in, threshold_minute, time_out, qr_pin, qr_active FROM settings WHERE id = 1";
+$query = "SELECT set_am_time_in, set_am_time_out, set_pm_time_in, set_pm_time_out FROM settings WHERE id = 1";
 $result = $conn->query($query);
 $settings = $result->fetch_assoc();
 
@@ -47,23 +40,17 @@ $settings = $result->fetch_assoc();
     <div class="content">
         <h1>Settings</h1>
         <form method="POST" action="">
-            <label for="time_in">Time In:</label>
-            <input type="time" name="time_in" value="<?php echo $settings['time_in']; ?>" required>
+            <label for="set_am_time_in">AM Time In:</label>
+            <input type="time" name="set_am_time_in" value="<?php echo $settings['set_am_time_in']; ?>" required>
             <br>
-            <label for="threshold_minute">Threshold Minute for Late:</label>
-            <input type="number" name="threshold_minute" value="<?php echo $settings['threshold_minute']; ?>" required>
+            <label for="set_am_time_out">AM Time Out:</label>
+            <input type="time" name="set_am_time_out" value="<?php echo $settings['set_am_time_out']; ?>" required>
             <br>
-            <label for="time_out">Time Out:</label>
-            <input type="time" name="time_out" value="<?php echo $settings['time_out']; ?>" required>
+            <label for="set_pm_time_in">PM Time In:</label>
+            <input type="time" name="set_pm_time_in" value="<?php echo isset($settings['set_pm_time_in']) ? $settings['set_pm_time_in'] : ''; ?>" required>
             <br>
-            <label for="qr_pin">QR Pin:</label>
-            <input type="text" name="qr_pin" value="<?php echo $settings['qr_pin']; ?>">
-            <br>
-            <label for="qr_active">QR Active:</label>
-            <select name="qr_active">
-                <option value="1" <?php echo $settings['qr_active'] == 1 ? 'selected' : ''; ?>>Active</option>
-                <option value="0" <?php echo $settings['qr_active'] == 0 ? 'selected' : ''; ?>>Inactive</option>
-            </select>
+            <label for="set_pm_time_out">PM Time Out:</label>
+            <input type="time" name="set_pm_time_out" value="<?php echo isset($settings['set_pm_time_out']) ? $settings['set_pm_time_out'] : ''; ?>" required>
             <br>
             <button type="submit">Update Settings</button>
         </form>

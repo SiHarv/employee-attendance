@@ -19,12 +19,13 @@ $settings = $result->fetch_assoc();
 
 // Handle form submission
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
-    $time_in = $_POST['time_in'];
-    $threshold_minute = $_POST['threshold_minute'];
-    $time_out = $_POST['time_out'];
+    $set_am_time_in = $_POST['set_am_time_in'];
+    $set_am_time_out = $_POST['set_am_time_out'];
+    $set_pm_time_in = $_POST['set_pm_time_in'];
+    $set_pm_time_out = $_POST['set_pm_time_out'];
 
-    $stmt = $conn->prepare("UPDATE settings SET set_am_time_in = ?, threshold_minute = ?, time_out = ? WHERE id = 1");
-    $stmt->bind_param("sis", $set_am_time_in, $threshold_minute, $time_out);
+    $stmt = $conn->prepare("UPDATE settings SET set_am_time_in = ?, set_am_time_out = ?, set_pm_time_in = ?, set_pm_time_out = ? WHERE id = 1");
+    $stmt->bind_param("ssss", $set_am_time_in, $set_am_time_out, $set_pm_time_in, $set_pm_time_out);
     
     if ($stmt->execute()) {
         $success_message = "Settings updated successfully!";
@@ -58,54 +59,59 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 <div class="tab-content" id="settingsTabsContent">
                     <!-- Attendance Settings Tab -->
                     <div class="tab-pane fade show active" id="attendance-settings" role="tabpanel" aria-labelledby="attendance-tab">
-                        <div class="card shadow border-0">
-                            <div class="card-header bg-primary text-white">
-                                <h3 class="card-title mb-0">Attendance Settings</h3>
-                            </div>
-                            <div class="card-body p-4">
-                                <div id="settings-message"></div>
-                                <form id="attendanceSettingsForm" class="needs-validation" novalidate>
+                        <form id="attendanceSettingsForm" class="needs-validation" novalidate>
+                            <div class="card shadow border-0 mb-4">
+                                <div class="card-header bg-primary text-white">
+                                    <h3 class="card-title mb-0">AM Attendance Settings</h3>
+                                </div>
+                                <div class="card-body p-4">
                                     <div class="mb-4">
-                                        <label class="form-label fw-bold">Time In</label>
+                                        <label class="form-label fw-bold">AM Time In</label>
                                         <input type="time" class="form-control form-control-lg" name="set_am_time_in" 
                                             value="<?php echo $settings['set_am_time_in']; ?>" required>
-                                        <small class="text-muted">Set the standard time in for employees</small>
+                                        <small class="text-muted">Set the standard AM time in for employees</small>
                                     </div>
                                     <div class="mb-4">
-                                        <label class="form-label fw-bold">Late Threshold (minutes)</label>
-                                        <input type="number" class="form-control form-control-lg" name="threshold_minute" 
-                                            value="<?php echo $settings['threshold_minute']; ?>" required>
-                                        <small class="text-muted">Minutes after Time In before marking as Late</small>
+                                        <label class="form-label fw-bold">AM Time Out</label>
+                                        <input type="time" class="form-control form-control-lg" name="set_am_time_out" 
+                                            value="<?php echo $settings['set_am_time_out']; ?>" required>
+                                        <small class="text-muted">Set the standard AM time out for employees</small>
                                     </div>
-                                    <div class="mb-4">
-                                        <label class="form-label fw-bold">Time Out</label>
-                                        <input type="time" class="form-control form-control-lg" name="time_out" 
-                                            value="<?php echo $settings['time_out']; ?>" required>
-                                        <small class="text-muted">Set the standard time out for employees</small>
-                                    </div>
-                                    <div class="mb-4">
-                                        <label class="form-label fw-bold">QR Pin</label>
-                                        <input type="password" class="form-control form-control-lg" name="qr_pin"
-                                            value="<?php echo isset($settings['qr_pin']) ? htmlspecialchars($settings['qr_pin']) : ''; ?>" autocomplete="off">
-                                        <small class="text-muted">Set or change the QR Pin (hidden)</small>
-                                    </div>
-                                    <div class="mb-4">
-                                        <label class="form-label fw-bold">QR Scanner Active</label>
-                                        <div class="form-check form-switch">
-                                            <input class="form-check-input" type="checkbox" id="qrActiveSwitch" name="qr_active" value="1"
-                                                <?php echo (isset($settings['qr_active']) && $settings['qr_active']) ? 'checked' : ''; ?>>
-                                            <label class="form-check-label" for="qrActiveSwitch">
-                                                <?php echo (isset($settings['qr_active']) && $settings['qr_active']) ? 'Active' : 'Inactive'; ?>
-                                            </label>
-                                        </div>
-                                        <small class="text-muted">Enable or disable QR code scanner for attendance</small>
-                                    </div>
-                                    <div class="d-grid gap-2">
-                                        <button type="submit" class="btn btn-primary btn-lg">Save Settings</button>
-                                    </div>
-                                </form>
+                                </div>
                             </div>
-                        </div>
+                            <div class="card shadow border-0 mb-4">
+                                <div class="card-header bg-secondary text-white">
+                                    <h3 class="card-title mb-0">PM Attendance Settings</h3>
+                                </div>
+                                <div class="card-body p-4">
+                                    <div class="mb-4">
+                                        <label class="form-label fw-bold">PM Time In</label>
+                                        <input type="time" class="form-control form-control-lg" name="set_pm_time_in" 
+                                            value="<?php
+                                                if (isset($settings['set_pm_time_in'])) {
+                                                    // Remove seconds if present (format HH:MM:SS to HH:MM)
+                                                    echo substr($settings['set_pm_time_in'], 0, 5);
+                                                }
+                                            ?>" required>
+                                        <small class="text-muted">Set the standard PM time in for employees</small>
+                                    </div>
+                                    <div class="mb-4">
+                                        <label class="form-label fw-bold">PM Time Out</label>
+                                        <input type="time" class="form-control form-control-lg" name="set_pm_time_out" 
+                                            value="<?php
+                                                if (isset($settings['set_pm_time_out'])) {
+                                                    // Remove seconds if present (format HH:MM:SS to HH:MM)
+                                                    echo substr($settings['set_pm_time_out'], 0, 5);
+                                                }
+                                            ?>" required>
+                                        <small class="text-muted">Set the standard PM time out for employees</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="d-grid gap-2 mb-4">
+                                <button type="submit" class="btn btn-primary btn-lg">Save Settings</button>
+                            </div>
+                        </form>
                     </div>
                     <!-- File Exports Tab -->
                     <div class="tab-pane fade" id="file-exports" role="tabpanel" aria-labelledby="exports-tab">
@@ -158,7 +164,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                                             <label class="form-check-label" for="colTimeIn">Time In</label>
                                         </div>
                                         <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" value="time_out" id="colTimeOut" checked>
+                                            <input class="form-check-input" type="checkbox" value="set_am_time_out" id="colTimeOut" checked>
                                             <label class="form-check-label" for="colTimeOut">Time Out</label>
                                         </div>
                                         <div class="form-check">
@@ -189,13 +195,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 // Add client-side validation if needed
 document.querySelector('form').addEventListener('submit', function(e) {
     const timeIn = document.querySelector('input[name="set_am_time_in"]').value;
-    const timeOut = document.querySelector('input[name="time_out"]').value;
-    const threshold = document.querySelector('input[name="threshold_minute"]').value;
+    const timeOut = document.querySelector('input[name="set_am_time_out"]').value;
 
-    if (parseInt(threshold) < 0) {
-        e.preventDefault();
-        alert('Threshold minutes cannot be negative');
-    }
 });
 
 // Handle export file name and settings
@@ -208,8 +209,8 @@ document.getElementById('exportExcelBtn').addEventListener('click', function(e) 
     if (document.getElementById('colEmployeeId').checked) columns.push('employee_id');
     if (document.getElementById('colName').checked) columns.push('name');
     if (document.getElementById('colDate').checked) columns.push('date');
-    if (document.getElementById('colTimeIn').checked) columns.push('time_in');
-    if (document.getElementById('colTimeOut').checked) columns.push('time_out');
+    if (document.getElementById('colTimeIn').checked) columns.push('set_am_time_in');
+    if (document.getElementById('colTimeOut').checked) columns.push('set_am_time_out');
     if (document.getElementById('colStatus').checked) columns.push('status');
 
     if (!fileName) {
@@ -242,10 +243,6 @@ document.getElementById('attendanceSettingsForm').addEventListener('submit', fun
     e.preventDefault();
     const form = e.target;
     const formData = new FormData(form);
-    // Ensure unchecked checkbox sends 0
-    if (!document.getElementById('qrActiveSwitch').checked) {
-        formData.set('qr_active', '0');
-    }
     fetch('../../controller/admin/admin_settings.php', {
         method: 'POST',
         body: formData

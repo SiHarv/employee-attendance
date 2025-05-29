@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: May 29, 2025 at 04:18 PM
+-- Generation Time: May 29, 2025 at 06:21 PM
 -- Server version: 10.4.28-MariaDB
 -- PHP Version: 8.2.4
 
@@ -41,6 +41,20 @@ CREATE TABLE `admin` (
 
 INSERT INTO `admin` (`id`, `username`, `password`, `email`, `created_at`) VALUES
 (2, 'admin', '$2y$10$u01qTOMsueXPlwyIfojzqe6g.Zi3SW.omO.lkt96lb4T2lSIvJKmu', 'admin@example.com', '2025-05-26 14:59:51');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `afternoon_time_log`
+--
+
+CREATE TABLE `afternoon_time_log` (
+  `id` int(11) NOT NULL,
+  `employee_id` int(11) NOT NULL,
+  `time_in` datetime DEFAULT NULL,
+  `time_out` datetime DEFAULT NULL,
+  `status` enum('present','late','absent') DEFAULT 'absent'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
 
@@ -133,7 +147,7 @@ INSERT INTO `morning_time_log` (`id`, `employee_id`, `time_in`, `time_out`, `sta
 (88, 13, '2025-05-29 14:03:48', '2025-05-29 14:05:55', 'late'),
 (89, 14, '2025-05-29 14:17:03', NULL, 'late'),
 (90, 14, '2025-05-30 14:20:30', '2025-05-30 18:23:01', 'late'),
-(91, 4, '2025-05-29 22:10:32', NULL, 'present');
+(91, 4, '2025-05-29 20:10:32', '2025-05-29 23:54:00', 'present');
 
 -- --------------------------------------------------------
 
@@ -143,19 +157,18 @@ INSERT INTO `morning_time_log` (`id`, `employee_id`, `time_in`, `time_out`, `sta
 
 CREATE TABLE `settings` (
   `id` int(11) NOT NULL,
-  `time_in` time NOT NULL,
-  `threshold_minute` int(11) NOT NULL,
-  `time_out` time NOT NULL,
-  `qr_pin` varchar(255) NOT NULL,
-  `qr_active` tinyint(1) NOT NULL
+  `set_am_time_in` time NOT NULL,
+  `set_am_time_out` time NOT NULL,
+  `set_pm_time_in` time NOT NULL,
+  `set_pm_time_out` time NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `settings`
 --
 
-INSERT INTO `settings` (`id`, `time_in`, `threshold_minute`, `time_out`, `qr_pin`, `qr_active`) VALUES
-(1, '22:00:00', 15, '23:00:00', '1234', 1);
+INSERT INTO `settings` (`id`, `set_am_time_in`, `set_am_time_out`, `set_pm_time_in`, `set_pm_time_out`) VALUES
+(1, '23:00:00', '12:00:00', '00:12:34', '00:00:01');
 
 -- --------------------------------------------------------
 
@@ -191,101 +204,6 @@ INSERT INTO `users` (`id`, `username`, `password`, `email`, `code`, `created_at`
 (13, 'harley', '$2y$10$jTi28IaMMDUpzNHEattyKeVxLr5KR7sZHE3q5X4MtZ9U0Pnd0IQfq', 'harley@gmail.com', 'EMP02AFE4A5', '2025-05-28 04:40:53'),
 (14, 'Mark', '$2y$10$nnmgcbxSMiLM5sd9BFZZ/OZL7F7rOu5h1R7W.fHzN8YsKdi/sWzA6', 'mark@gmail.com', 'EMP04202F81', '2025-05-29 06:16:13');
 
--- --------------------------------------------------------
-
---
--- Table structure for table `afternoon_time_log`
---
-
-CREATE TABLE `afternoon_time_log` (
-  `id` int(11) NOT NULL,
-  `employee_id` int(11) NOT NULL,
-  `time_in` datetime DEFAULT NULL,
-  `time_out` datetime DEFAULT NULL,
-  `status` enum('present','late','absent') DEFAULT 'absent'
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
---
--- Dumping data for table `afternoon_time_log`
---
-
-INSERT INTO `afternoon_time_log` (`id`, `employee_id`, `time_in`, `time_out`, `status`) VALUES
-(1, 1, '2025-05-19 13:21:00', '2025-05-19 17:22:00', 'late'),
-(2, 2, '2025-05-19 13:25:00', '2025-05-27 16:49:00', 'late'),
-(3, 3, '2025-05-19 13:14:00', '2025-05-19 16:54:00', 'present'),
-(4, 4, '2025-05-19 13:20:00', '2025-05-19 17:21:00', 'late'),
-(5, 5, '2025-05-19 12:47:00', '2025-05-19 17:30:00', 'present'),
-(6, 6, '2025-05-19 13:09:00', '2025-05-19 17:09:00', 'present'),
-(8, 8, '2025-05-19 12:56:00', '2025-05-19 17:30:00', 'present'),
-(9, 9, '2025-05-19 13:06:00', '2025-05-19 17:00:00', 'present'),
-(10, 1, '2025-05-20 12:45:00', '2025-05-20 17:14:00', 'present'),
-(12, 3, '2025-05-20 13:10:00', '2025-05-20 16:45:00', 'present'),
-(13, 4, '2025-05-20 13:06:00', '2025-05-20 17:11:00', 'present'),
-(14, 5, '2025-05-20 13:23:00', '2025-05-20 16:53:00', 'late'),
-(15, 6, '2025-05-20 13:24:00', '2025-05-20 16:48:00', 'late'),
-(17, 8, '2025-05-20 13:08:00', '2025-05-20 17:06:00', 'present'),
-(18, 9, '2025-05-20 13:28:00', '2025-05-20 17:20:00', 'late'),
-(19, 10, '2025-05-20 12:47:00', '2025-05-20 17:12:00', 'present'),
-(20, 1, '2025-05-21 13:28:00', '2025-05-21 16:57:00', 'late'),
-(21, 3, '2025-05-21 13:29:00', '2025-05-21 16:59:00', 'late'),
-(22, 4, '2025-05-21 13:23:00', '2025-05-21 16:52:00', 'late'),
-(23, 5, '2025-05-21 13:10:00', '2025-05-21 17:15:00', 'present'),
-(24, 6, '2025-05-21 13:23:00', '2025-05-21 17:15:00', 'late'),
-(25, 8, '2025-05-21 13:27:00', '2025-05-21 17:22:00', 'late'),
-(26, 9, '2025-05-21 12:54:00', '2025-05-21 16:55:00', 'present'),
-(27, 10, '2025-05-21 12:57:00', '2025-05-21 17:30:00', 'present'),
-(28, 1, '2025-05-22 12:54:00', '2025-05-22 16:57:00', 'present'),
-(29, 2, '2025-05-22 13:08:00', '2025-05-22 16:50:00', 'present'),
-(30, 3, '2025-05-22 12:51:00', '2025-05-22 16:48:00', 'present'),
-(31, 4, '2025-05-22 13:22:00', '2025-05-22 16:53:00', 'late'),
-(32, 5, '2025-05-22 12:59:00', '2025-05-22 17:03:00', 'present'),
-(33, 8, '2025-05-22 13:14:00', '2025-05-22 17:27:00', 'present'),
-(34, 10, '2025-05-22 13:05:00', '2025-05-22 17:09:00', 'present'),
-(35, 1, '2025-05-23 13:12:00', '2025-05-23 16:54:00', 'present'),
-(36, 2, '2025-05-23 13:25:00', '2025-05-23 16:49:00', 'late'),
-(37, 3, '2025-05-23 12:54:00', '2025-05-23 17:24:00', 'present'),
-(38, 4, '2025-05-23 12:48:00', '2025-05-23 17:25:00', 'present'),
-(39, 6, '2025-05-23 12:45:00', '2025-05-23 17:26:00', 'present'),
-(41, 8, '2025-05-23 12:58:00', '2025-05-23 17:23:00', 'present'),
-(42, 9, '2025-05-23 13:29:00', '2025-05-23 17:03:00', 'late'),
-(43, 10, '2025-05-23 13:05:00', '2025-05-23 17:23:00', 'present'),
-(44, 1, '2025-05-24 12:45:00', '2025-05-24 16:52:00', 'present'),
-(45, 2, '2025-05-24 13:28:00', '2025-05-24 17:18:00', 'late'),
-(46, 3, '2025-05-24 13:09:00', '2025-05-24 17:18:00', 'present'),
-(47, 4, '2025-05-24 12:46:00', '2025-05-24 17:06:00', 'present'),
-(48, 5, '2025-05-24 13:30:00', '2025-05-24 16:50:00', 'late'),
-(50, 8, '2025-05-24 13:03:00', '2025-05-24 17:24:00', 'present'),
-(51, 9, '2025-05-24 12:58:00', '2025-05-24 17:30:00', 'present'),
-(52, 10, '2025-05-24 13:15:00', '2025-05-24 17:20:00', 'present'),
-(53, 2, '2025-05-25 13:09:00', '2025-05-25 17:25:00', 'present'),
-(54, 3, '2025-05-25 13:01:00', '2025-05-25 17:20:00', 'present'),
-(55, 4, '2025-05-25 13:00:00', '2025-05-25 16:45:00', 'present'),
-(56, 5, '2025-05-25 13:05:00', '2025-05-25 17:13:00', 'present'),
-(57, 6, '2025-05-25 13:16:00', '2025-05-25 17:04:00', 'late'),
-(59, 8, '2025-05-25 12:47:00', '2025-05-25 17:24:00', 'present'),
-(60, 9, '2025-05-25 13:09:00', '2025-05-25 17:18:00', 'present'),
-(61, 10, '2025-05-25 13:24:00', '2025-05-25 16:55:00', 'late'),
-(62, 1, '2025-05-26 12:57:00', NULL, 'present'),
-(63, 2, '2025-05-26 12:50:00', '2025-05-26 16:52:00', 'present'),
-(64, 3, '2025-05-26 12:58:00', '2025-05-26 16:52:00', 'present'),
-(65, 4, '2025-05-26 13:02:00', '2025-05-26 17:23:00', 'present'),
-(66, 5, '2025-05-26 13:00:00', NULL, 'present'),
-(67, 6, '2025-05-26 13:01:00', '2025-05-26 17:18:00', 'present'),
-(69, 8, '2025-05-26 13:23:00', '2025-05-26 16:48:00', 'late'),
-(70, 9, '2025-05-27 13:29:00', '2025-05-27 17:25:00', 'late'),
-(71, 10, '2025-05-26 13:10:00', NULL, 'present'),
-(74, 4, '2025-05-27 23:32:29', NULL, 'late'),
-(75, 12, '2025-05-28 01:42:52', '2025-05-29 15:07:00', 'present'),
-(83, 11, NULL, NULL, 'present'),
-(86, 13, '2025-05-28 15:03:42', '2025-05-28 17:04:14', 'present'),
-(87, 11, '2025-05-28 16:25:10', '2025-05-29 17:04:00', 'late'),
-(88, 13, '2025-05-29 14:03:48', '2025-05-29 14:05:55', 'late'),
-(89, 14, '2025-05-29 14:17:03', NULL, 'late'),
-(90, 14, '2025-05-30 14:20:30', '2025-05-30 18:23:01', 'late'),
-(91, 4, '2025-05-29 22:10:32', NULL, 'present');
-
--- --------------------------------------------------------
-
 --
 -- Indexes for dumped tables
 --
@@ -297,6 +215,13 @@ ALTER TABLE `admin`
   ADD PRIMARY KEY (`id`),
   ADD UNIQUE KEY `username` (`username`),
   ADD UNIQUE KEY `email` (`email`);
+
+--
+-- Indexes for table `afternoon_time_log`
+--
+ALTER TABLE `afternoon_time_log`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `employee_id` (`employee_id`);
 
 --
 -- Indexes for table `morning_time_log`
@@ -318,13 +243,6 @@ ALTER TABLE `users`
   ADD PRIMARY KEY (`id`),
   ADD UNIQUE KEY `username` (`username`),
   ADD UNIQUE KEY `email` (`email`);
-
---
--- Indexes for table `afternoon_time_log`
---
-ALTER TABLE `afternoon_time_log`
-  ADD PRIMARY KEY (`id`),
-  ADD KEY `employee_id` (`employee_id`);
 
 --
 -- AUTO_INCREMENT for dumped tables
@@ -355,12 +273,6 @@ ALTER TABLE `users`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=15;
 
 --
--- AUTO_INCREMENT for table `afternoon_time_log`
---
-ALTER TABLE `afternoon_time_log`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
-
---
 -- Constraints for dumped tables
 --
 
@@ -369,12 +281,6 @@ ALTER TABLE `afternoon_time_log`
 --
 ALTER TABLE `morning_time_log`
   ADD CONSTRAINT `morning_time_log_ibfk_1` FOREIGN KEY (`employee_id`) REFERENCES `users` (`id`) ON DELETE CASCADE;
-
---
--- Constraints for table `afternoon_time_log`
---
-ALTER TABLE `afternoon_time_log`
-  ADD CONSTRAINT `afternoon_time_log_ibfk_1` FOREIGN KEY (`employee_id`) REFERENCES `users` (`id`) ON DELETE CASCADE;
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;

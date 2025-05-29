@@ -23,9 +23,10 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $set_am_time_out = $_POST['set_am_time_out'];
     $set_pm_time_in = $_POST['set_pm_time_in'];
     $set_pm_time_out = $_POST['set_pm_time_out'];
+    $threshold_minute = $_POST['threshold_minute'];
 
-    $stmt = $conn->prepare("UPDATE settings SET set_am_time_in = ?, set_am_time_out = ?, set_pm_time_in = ?, set_pm_time_out = ? WHERE id = 1");
-    $stmt->bind_param("ssss", $set_am_time_in, $set_am_time_out, $set_pm_time_in, $set_pm_time_out);
+    $stmt = $conn->prepare("UPDATE settings SET set_am_time_in = ?, set_am_time_out = ?, set_pm_time_in = ?, set_pm_time_out = ?, threshold_minute = ? WHERE id = 1");
+    $stmt->bind_param("sssss", $set_am_time_in, $set_am_time_out, $set_pm_time_in, $set_pm_time_out, $threshold_minute);
     
     if ($stmt->execute()) {
         $success_message = "Settings updated successfully!";
@@ -62,7 +63,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                         <form id="attendanceSettingsForm" class="needs-validation" novalidate>
                             <div class="card shadow border-0 mb-4">
                                 <div class="card-header bg-primary text-white">
-                                    <h3 class="card-title mb-0">AM Attendance Settings</h3>
+                                    <h3 class="card-title mb-0">Attendance Settings</h3>
                                 </div>
                                 <div class="card-body p-4">
                                     <div class="mb-4">
@@ -77,34 +78,23 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                                             value="<?php echo $settings['set_am_time_out']; ?>" required>
                                         <small class="text-muted">Set the standard AM time out for employees</small>
                                     </div>
-                                </div>
-                            </div>
-                            <div class="card shadow border-0 mb-4">
-                                <div class="card-header bg-secondary text-white">
-                                    <h3 class="card-title mb-0">PM Attendance Settings</h3>
-                                </div>
-                                <div class="card-body p-4">
                                     <div class="mb-4">
                                         <label class="form-label fw-bold">PM Time In</label>
                                         <input type="time" class="form-control form-control-lg" name="set_pm_time_in" 
-                                            value="<?php
-                                                if (isset($settings['set_pm_time_in'])) {
-                                                    // Remove seconds if present (format HH:MM:SS to HH:MM)
-                                                    echo substr($settings['set_pm_time_in'], 0, 5);
-                                                }
-                                            ?>" required>
+                                            value="<?php echo isset($settings['set_pm_time_in']) ? substr($settings['set_pm_time_in'], 0, 5) : ''; ?>" required>
                                         <small class="text-muted">Set the standard PM time in for employees</small>
                                     </div>
                                     <div class="mb-4">
                                         <label class="form-label fw-bold">PM Time Out</label>
                                         <input type="time" class="form-control form-control-lg" name="set_pm_time_out" 
-                                            value="<?php
-                                                if (isset($settings['set_pm_time_out'])) {
-                                                    // Remove seconds if present (format HH:MM:SS to HH:MM)
-                                                    echo substr($settings['set_pm_time_out'], 0, 5);
-                                                }
-                                            ?>" required>
+                                            value="<?php echo isset($settings['set_pm_time_out']) ? substr($settings['set_pm_time_out'], 0, 5) : ''; ?>" required>
                                         <small class="text-muted">Set the standard PM time out for employees</small>
+                                    </div>
+                                    <div class="mb-4">
+                                        <label class="form-label fw-bold">Late Threshold (minutes)</label>
+                                        <input type="number" class="form-control form-control-lg" name="threshold_minute"
+                                            value="<?php echo isset($settings['threshold_minute']) ? (int)$settings['threshold_minute'] : 15; ?>" min="1" required>
+                                        <small class="text-muted">Number of minutes after AM/PM time in before employee is considered late (applies to both morning and afternoon)</small>
                                     </div>
                                 </div>
                             </div>

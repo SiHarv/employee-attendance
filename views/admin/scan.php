@@ -32,7 +32,6 @@ $settings_query = "SELECT set_am_time_in, set_am_time_out, set_pm_time_in, set_p
 $settings_result = $conn->query($settings_query);
 $settings = $settings_result->fetch_assoc();
 
-// Default settings if none are found
 if (!$settings) {
     $settings = [
         'set_am_time_in' => '08:00:00',
@@ -41,6 +40,7 @@ if (!$settings) {
         'set_pm_time_out' => '17:00:00'
     ];
 }
+$set_am_time_out = $settings['set_am_time_out'];
 
 // Format time for display
 $expected_time = date('h:i A', strtotime($settings['set_am_time_in']));
@@ -150,6 +150,8 @@ document.addEventListener('DOMContentLoaded', function() {
     // Get PM time in/out from PHP
     const pmTimeInSetting = '<?php echo $settings['set_pm_time_in']; ?>';
     const pmTimeOutSetting = '<?php echo $settings['set_pm_time_out']; ?>';
+    // Get AM time out from PHP
+    const amTimeOutSetting = "<?php echo $set_am_time_out; ?>";
 
     function getCurrentTimeStr() {
         const now = new Date();
@@ -157,6 +159,35 @@ document.addEventListener('DOMContentLoaded', function() {
                now.getMinutes().toString().padStart(2, '0') + ':' +
                now.getSeconds().toString().padStart(2, '0');
     }
+
+    // Automatic switch to Time Out if current time >= settings.set_am_time_out
+    function autoSwitchToTimeOut() {
+        const nowStr = getCurrentTimeStr();
+        if (nowStr >= amTimeOutSetting) {
+            scanMode = 'out';
+            if (typeof scanModeLabel !== 'undefined') {
+                scanModeLabel.textContent = 'Time Out';
+                scanModeLabel.className = 'ms-2 badge bg-danger';
+            }
+            if (typeof toggleModeBtn !== 'undefined') {
+                toggleModeBtn.textContent = 'Switch to Time In';
+            }
+        } else {
+            scanMode = 'in';
+            if (typeof scanModeLabel !== 'undefined') {
+                scanModeLabel.textContent = 'Time In';
+                scanModeLabel.className = 'ms-2 badge bg-primary';
+            }
+            if (typeof toggleModeBtn !== 'undefined') {
+                toggleModeBtn.textContent = 'Switch to Time Out';
+            }
+        }
+    }
+
+    // Initial check
+    autoSwitchToTimeOut();
+    // Optionally, check every minute in case the page is left open
+    setInterval(autoSwitchToTimeOut, 60000);
 
     function updateSessionModeAndScanMode() {
         const nowStr = getCurrentTimeStr();

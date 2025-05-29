@@ -16,13 +16,14 @@ if (!isset($_SESSION['admin_id'])) {
 
 // Function to get current settings for time comparisons
 function getSettings($conn) {
-    $stmt = $conn->prepare("SELECT set_am_time_in FROM settings WHERE id = 1");
+    $stmt = $conn->prepare("SELECT set_am_time_in, threshold_minute FROM settings WHERE id = 1");
     $stmt->execute();
     $result = $stmt->get_result();
     if ($result->num_rows === 0) {
         // Default settings if none found
         return [
-            'set_am_time_in' => '08:00:00'
+            'set_am_time_in' => '08:00:00',
+            'threshold_minute' => 15
         ];
     }
     return $result->fetch_assoc();
@@ -77,9 +78,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exit;
     }
     
-    // Using 15 minutes as fixed threshold since it's no longer in settings table
-    $threshold_minute = 15;
-    
+    // Calculate late threshold time (set_am_time_in + threshold_minute)
+    $late_time = date('H:i:s', strtotime($settings['set_am_time_in'] . ' +' . intval($settings['threshold_minute']) . ' minutes'));
+
     // Insert with NOW() and determine status using SQL
     $sql = "
         INSERT INTO morning_time_log (employee_id, time_in, status)
@@ -96,7 +97,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $stmt->bind_param(
         "is",
         $employee_id,
-        $settings['set_am_time_in']
+        $late_time
     );
     
     if ($stmt->execute()) {

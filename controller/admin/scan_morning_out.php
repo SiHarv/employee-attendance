@@ -11,23 +11,7 @@ session_start();
 
 header('Content-Type: application/json');
 
-// Check DB connection
-if (!$conn) {
-    echo json_encode([
-        'success' => false,
-        'message' => 'Database connection error'
-    ]);
-    exit;
-}
-
-if (!isset($_SESSION['admin_id'])) {
-    echo json_encode([
-        'success' => false,
-        'message' => 'Authentication required'
-    ]);
-    exit;
-}
-
+// Function to get current settings
 function getSettings($conn) {
     $stmt = $conn->prepare("SELECT set_am_time_out FROM settings WHERE id = 1");
     $stmt->execute();
@@ -50,13 +34,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     $qrCode = $jsonData['qrCode'];
-
-    // Check if the QR code exists in the users table
+    
+    // Check if employee exists
     $stmt = $conn->prepare("SELECT id, username FROM users WHERE code = ?");
     $stmt->bind_param("s", $qrCode);
     $stmt->execute();
     $result = $stmt->get_result();
-
+    
     if ($result->num_rows === 0) {
         echo json_encode([
             'success' => false,
@@ -69,9 +53,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $employee_id = $employee['id'];
     $employee_name = $employee['username'];
 
-    $settings = getSettings($conn);
-
-    // Check today's morning_time_log for this employee
+    // Check today's time log
     $stmt = $conn->prepare("SELECT id, time_in, time_out FROM morning_time_log WHERE employee_id = ? AND DATE(time_in) = CURDATE()");
     $stmt->bind_param("i", $employee_id);
     $stmt->execute();
@@ -91,60 +73,49 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!is_null($log['time_out'])) {
         echo json_encode([
             'success' => false,
-            'message' => 'Already timed out today.',
+            'message' => 'Comeback later for Time out. You have already timed out today.',
             'employeeName' => $employee_name
         ]);
         exit;
     }
 
-    // Get current time from database server in 24-hour format
-    $currentTimeResult = $conn->query("SELECT CURRENT_TIME() as now");
-    if (!$currentTimeResult) {
-        echo json_encode([
-            'success' => false,
-            'message' => 'Error getting current time: ' . $conn->error
-        ]);
-        exit;
-    }
-    $currentTimeRow = $currentTimeResult->fetch_assoc();
-    $currentTime = $currentTimeRow['now'];
-    $timeOutSetting = $settings['set_am_time_out'];
+    // Get settings
+    $settings = getSettings($conn);
 
-    // Compare using timestamps to avoid string comparison issues
-    if (strtotime($currentTime) < strtotime($timeOutSetting)) {
+    // Set timezone and get current time
+    date_default_timezone_set('Asia/Manila');
+    $currentTime = strtotime(date('H:i:s'));
+    $timeOutSetting = strtotime($settings['set_am_time_out']);
+
+    // Compare times
+    if ($currentTime < $timeOutSetting) {
         echo json_encode([
             'success' => false,
             'message' => 'Not yet time to time out. Come back at time out.',
-            'comebackTime' => $timeOutSetting,
+            'comebackTime' => date('h:i A', $timeOutSetting),
             'employeeName' => $employee_name
         ]);
         exit;
     }
 
-    // It's time to time out, update the record
+    // Update time out
     $stmt2 = $conn->prepare("UPDATE morning_time_log SET time_out = NOW() WHERE id = ?");
     $stmt2->bind_param("i", $log['id']);
     if ($stmt2->execute()) {
-        // Get the actual time_out from database for accurate display
-        $timeQuery = $conn->query("SELECT TIME_FORMAT(time_out, '%H:%i') as formatted_time FROM morning_time_log WHERE id = " . $log['id']);
-        $timeRow = $timeQuery->fetch_assoc();
-        $timeOut = $timeRow['formatted_time'];
-
         echo json_encode([
             'success' => true,
             'message' => "Time out recorded successfully! {$employee_name}.",
             'employeeName' => $employee_name,
             'status' => 'timeout',
-            'time' => $timeOut
+            'time' => date('h:i A', $currentTime)
         ]);
-        exit;
     } else {
         echo json_encode([
             'success' => false,
             'message' => 'Error recording time out: ' . $stmt2->error
         ]);
-        exit;
     }
+    exit;
 } else {
     echo json_encode([
         'success' => false,

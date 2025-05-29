@@ -16,14 +16,13 @@ if (!isset($_SESSION['admin_id'])) {
 
 // Function to get current settings for time comparisons
 function getSettings($conn) {
-    $stmt = $conn->prepare("SELECT set_am_time_in, set_am_time_out FROM settings WHERE id = 1");
+    $stmt = $conn->prepare("SELECT set_am_time_in FROM settings WHERE id = 1");
     $stmt->execute();
     $result = $stmt->get_result();
     if ($result->num_rows === 0) {
         // Default settings if none found
         return [
-            'set_am_time_in' => '08:00:00',
-            'set_am_time_out' => '17:00:00'
+            'set_am_time_in' => '08:00:00'
         ];
     }
     return $result->fetch_assoc();
@@ -66,56 +65,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $settings = getSettings($conn);
 
     // Check if employee already logged in today (using DB server date)
-    $stmt = $conn->prepare("SELECT id, time_in, time_out FROM morning_time_log WHERE employee_id = ? AND DATE(time_in) = CURDATE()");
+    $stmt = $conn->prepare("SELECT id FROM morning_time_log WHERE employee_id = ? AND DATE(time_in) = CURDATE()");
     $stmt->bind_param("i", $employee_id);
     $stmt->execute();
-    $check_result = $stmt->get_result();
-
-    if ($check_result->num_rows > 0) {
-        $log = $check_result->fetch_assoc();
-        // If time_out is not set, check if it's time to time out
-        if (is_null($log['time_out'])) {
-            // Get current time and time_out from settings
-            $currentTime = date('H:i:s');
-            $timeOutSetting = $settings['set_am_time_out'];
-            if ($currentTime < $timeOutSetting) {
-                // Not yet time to time out
-                echo json_encode([
-                    'success' => false,
-                    'message' => 'Already logged in today. Come back at time out.',
-                    'comebackTime' => date('h:i A', strtotime($timeOutSetting)),
-                    'employeeName' => $employee_name
-                ]);
-                exit;
-            } else {
-                // It's time to time out, update the record
-                $stmt2 = $conn->prepare("UPDATE morning_time_log SET time_out = NOW() WHERE id = ?");
-                $stmt2->bind_param("i", $log['id']);
-                if ($stmt2->execute()) {
-                    echo json_encode([
-                        'success' => true,
-                        'message' => "Time out recorded successfully! {$employee_name}.",
-                        'employeeName' => $employee_name,
-                        'status' => 'timeout',
-                        'time' => date('h:i A')
-                    ]);
-                } else {
-                    echo json_encode([
-                        'success' => false,
-                        'message' => 'Error recording time out: ' . $stmt2->error
-                    ]);
-                }
-                exit;
-            }
-        } else {
-            // Already timed out today
-            echo json_encode([
-                'success' => false,
-                'message' => 'Already logged in and timed out today.',
-                'employeeName' => $employee_name
-            ]);
-            exit;
-        }
+    if ($stmt->get_result()->num_rows > 0) {
+        echo json_encode([
+            'success' => false,
+            'message' => 'Already logged in today.',
+            'employeeName' => $employee_name
+        ]);
+        exit;
     }
     
     // Using 15 minutes as fixed threshold since it's no longer in settings table

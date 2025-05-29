@@ -143,12 +143,14 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Function to check and update scan mode based on current time
     function updateScanMode() {
+        // Set timezone for client
         const now = new Date();
-        const currentTime = now.getHours().toString().padStart(2, '0') + ':' + 
-                          now.getMinutes().toString().padStart(2, '0') + ':' + 
-                          now.getSeconds().toString().padStart(2, '0');
+        const timeOutSetting = new Date();
+        const [hours, minutes] = '<?php echo $settings['set_am_time_out']; ?>'.split(':');
         
-        if (currentTime >= timeOutSetting && scanMode === 'in') {
+        timeOutSetting.setHours(parseInt(hours), parseInt(minutes), 0);
+        
+        if (now >= timeOutSetting && scanMode === 'in') {
             scanMode = 'out';
             scanModeLabel.textContent = 'Time Out';
             scanModeLabel.className = 'ms-2 badge bg-danger';

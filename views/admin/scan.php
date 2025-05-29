@@ -13,16 +13,19 @@ require_once '../../db/connect.php';
 
 // Get recent scans for the day
 $today = date('Y-m-d');
-$recent_scans_query = "SELECT tl.*, u.username 
-                      FROM morning_time_log tl 
+$recent_scans_query = "SELECT tl.*, u.username, u.code 
+                      FROM (
+                          SELECT * FROM morning_time_log
+                          WHERE DATE(time_in) = CURDATE()
+                          UNION ALL
+                          SELECT * FROM afternoon_time_log
+                          WHERE DATE(time_in) = CURDATE()
+                      ) tl 
                       JOIN users u ON tl.employee_id = u.id 
-                      WHERE DATE(tl.time_in) = ? 
-                      ORDER BY tl.time_in DESC 
+                      ORDER BY tl.id DESC, tl.time_in DESC 
                       LIMIT 10";
-$stmt = $conn->prepare($recent_scans_query);
-$stmt->bind_param("s", $today);
-$stmt->execute();
-$recent_scans = $stmt->get_result();
+$result = $conn->query($recent_scans_query);
+$recent_scans = $result;
 
 // Get settings
 $settings_query = "SELECT set_am_time_in, set_am_time_out FROM settings WHERE id = 1";
@@ -90,15 +93,19 @@ $late_time = date('h:i A', strtotime($settings['set_am_time_in']) + ($threshold_
                                         <tr>
                                             <th>Employee</th>
                                             <th>Time In</th>
+                                            <th>Time Out</th>
                                             <th>Status</th>
                                         </tr>
                                     </thead>
                                     <tbody id="recent-scans-list">
-                                        <?php if ($recent_scans->num_rows > 0): ?>
+                                        <?php if ($recent_scans && $recent_scans->num_rows > 0): ?>
                                             <?php while ($scan = $recent_scans->fetch_assoc()): ?>
                                                 <tr>
                                                     <td><?php echo htmlspecialchars($scan['username']); ?></td>
                                                     <td><?php echo date('h:i A', strtotime($scan['time_in'])); ?></td>
+                                                    <td>
+                                                        <?php echo $scan['time_out'] ? date('h:i A', strtotime($scan['time_out'])) : '-'; ?>
+                                                    </td>
                                                     <td>
                                                         <?php if ($scan['status'] === 'present'): ?>
                                                             <span class="badge bg-success">Present</span>
@@ -110,7 +117,7 @@ $late_time = date('h:i A', strtotime($settings['set_am_time_in']) + ($threshold_
                                             <?php endwhile; ?>
                                         <?php else: ?>
                                             <tr>
-                                                <td colspan="3" class="text-center">No scans recorded today</td>
+                                                <td colspan="4" class="text-center">No scans recorded today</td>
                                             </tr>
                                         <?php endif; ?>
                                     </tbody>

@@ -87,17 +87,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             ?,
             NOW(),
             CASE
-                WHEN TIME(NOW()) <= ADDTIME(?, SEC_TO_TIME(? * 60)) THEN 'present'
-                ELSE 'late'
+                WHEN TIME(NOW()) > ? THEN 'late'
+                ELSE 'present'
             END
         )
     ";
     $stmt = $conn->prepare($sql);
     $stmt->bind_param(
-        "isi",
+        "is",
         $employee_id,
-        $settings['set_am_time_in'],
-        $threshold_minute
+        $settings['set_am_time_in']
     );
     
     if ($stmt->execute()) {

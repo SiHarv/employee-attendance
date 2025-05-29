@@ -99,7 +99,6 @@ if (!isset($_SESSION['admin_id'])) {
         <div class="container-fluid mt-4">
             <div class="content-wrapper">
                 <div class="container-fluid">
-                    <!-- Report Statistics All cards removed hahaha kapuy -->
                     <!-- Filter Card -->
                     <div class="card shadow mb-4">
                         <div class="card-header py-3 bg-light">
@@ -168,83 +167,12 @@ if (!isset($_SESSION['admin_id'])) {
                         </div>
                     </div>
 
-                    <!-- Report Table -->
-                    <div class="card shadow mb-4">
-                        <div class="card-header py-3 d-flex justify-content-between align-items-center bg-white">
-                            <h6 class="m-0 font-weight-bold text-primary">
-                                Attendance Records
-                                <span class="text-muted ms-2">(<?php echo $totalRecords; ?> records)</span>
-                            </h6>
-                            <div class="input-group" style="width: 250px;">
-                                <input type="text" id="searchReport" class="form-control form-control-sm" placeholder="Search...">
-                                <span class="input-group-text"><i class="bi bi-search"></i></span>
-                            </div>
-                        </div>
-                        <div class="card-body">
-                            <div class="table-responsive" id="reportTableContainer">
-                                <table class="table table-striped table-hover" id="reportTable">
-                                    <thead class="table-dark">
-                                        <tr>
-                                            <th>Employee</th>
-                                            <th>Date</th>
-                                            <th>Time In</th>
-                                            <th>Time Out</th>
-                                            <th>Total Hours</th>
-                                            <th>Status</th>
-                                            <th>Actions</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <?php if ($result->num_rows == 0): ?>
-                                            <tr>
-                                                <td colspan="7" class="text-center">No records found</td>
-                                            </tr>
-                                        <?php else: ?>
-                                            <?php while($row = $result->fetch_assoc()): ?>
-                                                <?php
-                                                // Calculate hours if time_out exists
-                                                $hours = '-';
-                                                if (!empty($row['time_out'])) {
-                                                    $timeIn = new DateTime($row['time_in']);
-                                                    $timeOut = new DateTime($row['time_out']);
-                                                    $interval = $timeIn->diff($timeOut);
-                                                    $hours = $interval->h + ($interval->i / 60);
-                                                    $hours = round($hours, 2) . ' hrs';
-                                                }
-                                                ?>
-                                                <tr>
-                                                    <td><?php echo htmlspecialchars($row['username']); ?></td>
-                                                    <td><?php echo date('M d, Y', strtotime($row['time_in'])); ?></td>
-                                                    <td><?php echo date('h:i A', strtotime($row['time_in'])); ?></td>
-                                                    <td><?php echo $row['time_out'] ? date('h:i A', strtotime($row['time_out'])) : '-'; ?></td>
-                                                    <td><?php echo $hours; ?></td>
-                                                    <td>
-                                                        <span class="badge rounded-pill <?php 
-                                                            echo match($row['status']) {
-                                                                'present' => 'bg-success',
-                                                                'late' => 'bg-warning',
-                                                                'absent' => 'bg-danger',
-                                                                default => 'bg-secondary'
-                                                            };
-                                                        ?>">
-                                                            <?php echo ucfirst($row['status']); ?>
-                                                        </span>
-                                                    </td>
-                                                    <td>
-                                                        <button class="btn btn-sm btn-primary" onclick="editAttendance(<?php echo $row['id']; ?>, '<?php echo htmlspecialchars($row['username']); ?>', '<?php echo $row['time_in']; ?>', '<?php echo $row['time_out']; ?>', '<?php echo $row['status']; ?>')">
-                                                            <i class="bi bi-pencil me-1"></i>Edit
-                                                        </button>
-                                                    </td>
-                                                </tr>
-                                            <?php endwhile; ?>
-                                        <?php endif; ?>
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                        <div class="card-footer bg-white text-center">
-                            <p class="mt-2 mb-2">End of records</p>
-                        </div>
+                    <!-- Attendance Table Containers -->
+                    <div id="morningAttendanceContainer">
+                        <?php require_once '../../includes/admin/morning_attendance.php'; ?>
+                    </div>
+                    <div id="afternoonAttendanceContainer" style="display:none;">
+                        <!-- Afternoon attendance will be loaded here in the future -->
                     </div>
                 </div>
             </div>
@@ -311,6 +239,26 @@ if (!isset($_SESSION['admin_id'])) {
 
         // Call pagination for Attendance Records Table, 6 rows per page
         paginateReportTable(6);
+
+        // Button group toggle for Morning/Afternoon
+        $(".btn-group button").on("click", function() {
+            var btnText = $(this).text().trim();
+            if (btnText === "Morning") {
+                $("#morningAttendanceContainer").show();
+                $("#afternoonAttendanceContainer").hide();
+            } else if (btnText === "Afternoon") {
+                $("#morningAttendanceContainer").hide();
+                $("#afternoonAttendanceContainer").show();
+            }
+            // Set active state
+            $(".btn-group button").removeClass("active");
+            $(this).addClass("active");
+        });
+
+        // Set Morning as active by default
+        $(".btn-group button:contains('Morning')").addClass("active");
+        $("#morningAttendanceContainer").show();
+        $("#afternoonAttendanceContainer").hide();
     });
     
     function viewDetails(id) {

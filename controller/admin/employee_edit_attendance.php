@@ -9,6 +9,7 @@ if (!isset($_SESSION['admin_id'])) {
     exit;
 }
 
+// Morning Edit Attendance Handler
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $data = json_decode(file_get_contents('php://input'), true);
     
@@ -28,3 +29,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 } else {
     echo json_encode(['success' => false, 'message' => 'Invalid request method']);
 }
+
+
+// Afternoon Edit Attendance Handler
+//Code for afternoon attendance edit would be similar to the morning one, but using the `afternoon_time_log` table.
+// Note: Ensure to handle the afternoon attendance edit in a similar manner as the morning one.

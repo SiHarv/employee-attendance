@@ -29,11 +29,11 @@ if (!isset($_SESSION['admin_id'])) {
 }
 
 function getSettings($conn) {
-    $stmt = $conn->prepare("SELECT time_out FROM settings WHERE id = 1");
+    $stmt = $conn->prepare("SELECT set_am_time_out FROM settings WHERE id = 1");
     $stmt->execute();
     $result = $stmt->get_result();
     if ($result->num_rows === 0) {
-        return ['time_out' => '17:00:00'];
+        return ['set_am_time_out' => '17:00:00'];
     }
     return $result->fetch_assoc();
 }
@@ -108,7 +108,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
     $currentTimeRow = $currentTimeResult->fetch_assoc();
     $currentTime = $currentTimeRow['now'];
-    $timeOutSetting = $settings['time_out'];
+    $timeOutSetting = $settings['set_am_time_out'];
 
     // Compare using timestamps to avoid string comparison issues
     if (strtotime($currentTime) < strtotime($timeOutSetting)) {

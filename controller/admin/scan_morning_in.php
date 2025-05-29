@@ -16,15 +16,14 @@ if (!isset($_SESSION['admin_id'])) {
 
 // Function to get current settings for time comparisons
 function getSettings($conn) {
-    $stmt = $conn->prepare("SELECT time_in, threshold_minute, time_out FROM settings WHERE id = 1");
+    $stmt = $conn->prepare("SELECT set_am_time_in, set_am_time_out FROM settings WHERE id = 1");
     $stmt->execute();
     $result = $stmt->get_result();
     if ($result->num_rows === 0) {
         // Default settings if none found
         return [
-            'time_in' => '08:00:00',
-            'threshold_minute' => 15,
-            'time_out' => '17:00:00'
+            'set_am_time_in' => '08:00:00',
+            'set_am_time_out' => '17:00:00'
         ];
     }
     return $result->fetch_assoc();
@@ -78,7 +77,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (is_null($log['time_out'])) {
             // Get current time and time_out from settings
             $currentTime = date('H:i:s');
-            $timeOutSetting = $settings['time_out'];
+            $timeOutSetting = $settings['set_am_time_out'];
             if ($currentTime < $timeOutSetting) {
                 // Not yet time to time out
                 echo json_encode([
@@ -119,6 +118,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
     
+    // Using 15 minutes as fixed threshold since it's no longer in settings table
+    $threshold_minute = 15;
+    
     // Insert with NOW() and determine status using SQL
     $sql = "
         INSERT INTO morning_time_log (employee_id, time_in, status)
@@ -133,10 +135,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     ";
     $stmt = $conn->prepare($sql);
     $stmt->bind_param(
-        "iss",
+        "isi",
         $employee_id,
-        $settings['time_in'],
-        $settings['threshold_minute']
+        $settings['set_am_time_in'],
+        $threshold_minute
     );
     
     if ($stmt->execute()) {

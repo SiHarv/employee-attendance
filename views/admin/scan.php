@@ -25,22 +25,23 @@ $stmt->execute();
 $recent_scans = $stmt->get_result();
 
 // Get settings
-$settings_query = "SELECT time_in, threshold_minute, time_out FROM settings WHERE id = 1";
+$settings_query = "SELECT set_am_time_in, set_am_time_out FROM settings WHERE id = 1";
 $settings_result = $conn->query($settings_query);
 $settings = $settings_result->fetch_assoc();
 
 // Default settings if none are found
 if (!$settings) {
     $settings = [
-        'time_in' => '08:00:00',
-        'threshold_minute' => 15,
-        'time_out' => '17:00:00'
+        'set_am_time_in' => '08:00:00',
+        'set_am_time_out' => '17:00:00'
     ];
 }
 
 // Format time for display
-$expected_time = date('h:i A', strtotime($settings['time_in']));
-$late_time = date('h:i A', strtotime($settings['time_in']) + ($settings['threshold_minute'] * 60));
+$expected_time = date('h:i A', strtotime($settings['set_am_time_in']));
+// No threshold_minute in settings table now, using fixed 15 minutes for late threshold
+$threshold_minute = 15;
+$late_time = date('h:i A', strtotime($settings['set_am_time_in']) + ($threshold_minute * 60));
 ?>
 
 <div class="main-content">
@@ -52,7 +53,7 @@ $late_time = date('h:i A', strtotime($settings['time_in']) + ($settings['thresho
                         <div class="alert alert-info mb-4">
                             <p class="mb-0">
                                 <strong>Late After:</strong> <?php echo $late_time; ?> 
-                                (<?php echo $settings['threshold_minute']; ?> min threshold)
+                                (<?php echo $threshold_minute; ?> min threshold)
                             </p>
                         </div>
                         <!-- Scanner -->
@@ -138,7 +139,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const scanModeLabel = document.getElementById('scanModeLabel');
     
     // Add time_out from PHP settings
-    const timeOutSetting = '<?php echo $settings['time_out']; ?>';
+    const timeOutSetting = '<?php echo $settings['set_am_time_out']; ?>';
 
     // Function to check and update scan mode based on current time
     function updateScanMode() {

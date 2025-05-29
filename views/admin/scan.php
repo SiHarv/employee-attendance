@@ -28,7 +28,7 @@ $result = $conn->query($recent_scans_query);
 $recent_scans = $result;
 
 // Get settings
-$settings_query = "SELECT set_am_time_in, set_am_time_out FROM settings WHERE id = 1";
+$settings_query = "SELECT set_am_time_in, set_am_time_out, set_pm_time_in FROM settings WHERE id = 1";
 $settings_result = $conn->query($settings_query);
 $settings = $settings_result->fetch_assoc();
 
@@ -36,7 +36,8 @@ $settings = $settings_result->fetch_assoc();
 if (!$settings) {
     $settings = [
         'set_am_time_in' => '08:00:00',
-        'set_am_time_out' => '17:00:00'
+        'set_am_time_out' => '17:00:00',
+        'set_pm_time_in' => '13:00:00'
     ];
 }
 
@@ -142,46 +143,54 @@ document.addEventListener('DOMContentLoaded', function() {
     const preview = document.getElementById('preview');
     let scanner = null;
     let scanMode = 'in'; // 'in' or 'out'
-    const toggleModeBtn = document.getElementById('toggleModeBtn');
+    let sessionMode = 'am'; // 'am' or 'pm'
     const scanModeLabel = document.getElementById('scanModeLabel');
-    
-    // Add time_out from PHP settings
-    const timeOutSetting = '<?php echo $settings['set_am_time_out']; ?>';
+    const toggleModeBtn = document.getElementById('toggleModeBtn');
+    // Get PM time in from PHP
+    const pmTimeInSetting = '<?php echo $settings['set_pm_time_in']; ?>';
 
-    // Function to check and update scan mode based on current time
-    function updateScanMode() {
-        // Set timezone for client
+    function getCurrentTimeStr() {
         const now = new Date();
-        const timeOutSetting = new Date();
-        const [hours, minutes] = '<?php echo $settings['set_am_time_out']; ?>'.split(':');
-        
-        timeOutSetting.setHours(parseInt(hours), parseInt(minutes), 0);
-        
-        if (now >= timeOutSetting && scanMode === 'in') {
-            scanMode = 'out';
-            scanModeLabel.textContent = 'Time Out';
+        return now.getHours().toString().padStart(2, '0') + ':' +
+               now.getMinutes().toString().padStart(2, '0') + ':' +
+               now.getSeconds().toString().padStart(2, '0');
+    }
+
+    function updateSessionMode() {
+        const nowStr = getCurrentTimeStr();
+        // Compare as strings (format HH:MM:SS)
+        if (nowStr >= pmTimeInSetting) {
+            sessionMode = 'pm';
+        } else {
+            sessionMode = 'am';
+        }
+    }
+
+    function updateScanModeUI() {
+        // Update UI elements based on scan mode and session mode
+        if (scanMode === 'in') {
+            scanModeLabel.textContent = sessionMode === 'am' ? 'Time In' : 'Afternoon In';
+            scanModeLabel.className = sessionMode === 'am' ? 'ms-2 badge bg-primary' : 'ms-2 badge bg-warning';
+            toggleModeBtn.textContent = sessionMode === 'am' ? 'Switch to Time Out' : 'Switch to Afternoon Out';
+        } else {
+            scanModeLabel.textContent = sessionMode === 'am' ? 'Time Out' : 'Afternoon Out';
             scanModeLabel.className = 'ms-2 badge bg-danger';
             toggleModeBtn.textContent = 'Switch to Time In';
         }
     }
 
-    // Check time every minute
-    setInterval(updateScanMode, 60000);
+    // Update session mode and scan mode UI every minute
+    setInterval(function() {
+        updateSessionMode();
+        updateScanModeUI();
+    }, 60000);
     // Initial check
-    updateScanMode();
+    updateSessionMode();
+    updateScanModeUI();
 
     toggleModeBtn.addEventListener('click', function() {
-        if (scanMode === 'in') {
-            scanMode = 'out';
-            scanModeLabel.textContent = 'Time Out';
-            scanModeLabel.className = 'ms-2 badge bg-danger';
-            toggleModeBtn.textContent = 'Switch to Time In';
-        } else {
-            scanMode = 'in';
-            scanModeLabel.textContent = 'Time In';
-            scanModeLabel.className = 'ms-2 badge bg-primary';
-            toggleModeBtn.textContent = 'Switch to Time Out';
-        }
+        scanMode = (scanMode === 'in') ? 'out' : 'in';
+        updateScanModeUI();
     });
 
     function showScanResult(type, message) {
@@ -203,9 +212,16 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function handleScan(qrCodeData) {
         showScanResult('info', 'Processing QR Code...');
-        let url = scanMode === 'in'
-            ? '../../controller/admin/scan_morning_in.php'
-            : '../../controller/admin/scan_morning_out.php';
+        let url;
+        if (sessionMode === 'am') {
+            url = scanMode === 'in'
+                ? '../../controller/admin/scan_morning_in.php'
+                : '../../controller/admin/scan_morning_out.php';
+        } else {
+            url = scanMode === 'in'
+                ? '../../controller/admin/scan_afternoon_in.php'
+                : '../../controller/admin/scan_afternoon_out.php';
+        }
         fetch(url, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -213,10 +229,12 @@ document.addEventListener('DOMContentLoaded', function() {
         })
         .then(async response => {
             let data;
+            let rawText = await response.text();
             try {
-                data = await response.json();
+                data = JSON.parse(rawText);
             } catch (e) {
                 showScanResult('error', 'Server error: Invalid response. Please contact admin.');
+                console.error('Raw response:', rawText);
                 return;
             }
             if (data.success) {
@@ -224,13 +242,15 @@ document.addEventListener('DOMContentLoaded', function() {
                 setTimeout(function() { window.location.reload(); }, 2000);
             } else if (data.comebackTime) {
                 showScanResult('info', data.message + '<br><b>Come back at:</b> ' + data.comebackTime);
+                if (data.message) console.error('Scan error:', data.message);
             } else {
                 showScanResult('error', data.message);
+                if (data.message) console.error('Scan error:', data.message);
             }
         })
         .catch(error => {
             showScanResult('error', 'Error processing QR code. Check console for details.');
-            console.error('Error processing scan:', error);
+            console.error('Fetch error:', error);
         });
     }
 

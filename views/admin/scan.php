@@ -25,7 +25,7 @@ $stmt->execute();
 $recent_scans = $stmt->get_result();
 
 // Get settings
-$settings_query = "SELECT time_in, threshold_minute FROM settings WHERE id = 1";
+$settings_query = "SELECT time_in, threshold_minute, time_out FROM settings WHERE id = 1";
 $settings_result = $conn->query($settings_query);
 $settings = $settings_result->fetch_assoc();
 
@@ -33,7 +33,8 @@ $settings = $settings_result->fetch_assoc();
 if (!$settings) {
     $settings = [
         'time_in' => '08:00:00',
-        'threshold_minute' => 15
+        'threshold_minute' => 15,
+        'time_out' => '17:00:00'
     ];
 }
 
@@ -67,6 +68,12 @@ $late_time = date('h:i A', strtotime($settings['time_in']) + ($settings['thresho
                                         <button class="btn btn-danger" id="stopButton" style="display:none;">
                                             <i class="fas fa-stop me-2"></i>Stop Scanner
                                         </button>
+                                    </div>
+                                    <div class="mt-2">
+                                        <button class="btn btn-outline-secondary" id="toggleModeBtn" type="button">
+                                            Switch to Time Out
+                                        </button>
+                                        <span id="scanModeLabel" class="ms-2 badge bg-primary">Time In</span>
                                     </div>
                                 </div>
                             </div>
@@ -126,6 +133,46 @@ document.addEventListener('DOMContentLoaded', function() {
     const scanResult = document.getElementById('scan-result');
     const preview = document.getElementById('preview');
     let scanner = null;
+    let scanMode = 'in'; // 'in' or 'out'
+    const toggleModeBtn = document.getElementById('toggleModeBtn');
+    const scanModeLabel = document.getElementById('scanModeLabel');
+    
+    // Add time_out from PHP settings
+    const timeOutSetting = '<?php echo $settings['time_out']; ?>';
+
+    // Function to check and update scan mode based on current time
+    function updateScanMode() {
+        const now = new Date();
+        const currentTime = now.getHours().toString().padStart(2, '0') + ':' + 
+                          now.getMinutes().toString().padStart(2, '0') + ':' + 
+                          now.getSeconds().toString().padStart(2, '0');
+        
+        if (currentTime >= timeOutSetting && scanMode === 'in') {
+            scanMode = 'out';
+            scanModeLabel.textContent = 'Time Out';
+            scanModeLabel.className = 'ms-2 badge bg-danger';
+            toggleModeBtn.textContent = 'Switch to Time In';
+        }
+    }
+
+    // Check time every minute
+    setInterval(updateScanMode, 60000);
+    // Initial check
+    updateScanMode();
+
+    toggleModeBtn.addEventListener('click', function() {
+        if (scanMode === 'in') {
+            scanMode = 'out';
+            scanModeLabel.textContent = 'Time Out';
+            scanModeLabel.className = 'ms-2 badge bg-danger';
+            toggleModeBtn.textContent = 'Switch to Time In';
+        } else {
+            scanMode = 'in';
+            scanModeLabel.textContent = 'Time In';
+            scanModeLabel.className = 'ms-2 badge bg-primary';
+            toggleModeBtn.textContent = 'Switch to Time Out';
+        }
+    });
 
     function showScanResult(type, message) {
         scanResult.style.display = 'block';
@@ -146,16 +193,27 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function handleScan(qrCodeData) {
         showScanResult('info', 'Processing QR Code...');
-        fetch('../../controller/admin/process_scan.php', {
+        let url = scanMode === 'in'
+            ? '../../controller/admin/process_in_scan.php'
+            : '../../controller/admin/process_out_scan.php';
+        fetch(url, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ qrCode: qrCodeData })
         })
-        .then(response => response.json())
-        .then(data => {
+        .then(async response => {
+            let data;
+            try {
+                data = await response.json();
+            } catch (e) {
+                showScanResult('error', 'Server error: Invalid response. Please contact admin.');
+                return;
+            }
             if (data.success) {
-                showScanResult('success', data.message + (data.time ? '<br><b>Time In:</b> ' + data.time : ''));
+                showScanResult('success', data.message + (data.time ? '<br><b>Time:</b> ' + data.time : ''));
                 setTimeout(function() { window.location.reload(); }, 2000);
+            } else if (data.comebackTime) {
+                showScanResult('info', data.message + '<br><b>Come back at:</b> ' + data.comebackTime);
             } else {
                 showScanResult('error', data.message);
             }
@@ -206,12 +264,14 @@ document.addEventListener('DOMContentLoaded', function() {
                 const option = document.createElement('option');
                 option.value = camera.id;
                 option.text = camera.name || `Camera ${idx + 1}`;
-                if (camera.name && camera.name.toLowerCase().includes('back')) {
+                // Set Camera 3 as default if available
+                if (idx === 2) {
                     option.selected = true;
                 }
                 cameraSelect.appendChild(option);
             });
-            if (!cameraSelect.value) {
+            // If less than 3 cameras, select the first one
+            if (cameras.length < 3) {
                 cameraSelect.options[0].selected = true;
             }
             startButton.disabled = false;

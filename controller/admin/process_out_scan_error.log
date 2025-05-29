@@ -1,0 +1,5 @@
+[28-May-2025 08:54:30 Europe/Berlin] PHP Fatal error:  Uncaught mysqli_sql_exception: You have an error in your SQL syntax; check the manual that corresponds to your MariaDB server version for the right syntax to use near 'current_time' at line 1 in C:\xampp\htdocs\employee-attendance\controller\admin\process_out_scan.php:101
+Stack trace:
+#0 C:\xampp\htdocs\employee-attendance\controller\admin\process_out_scan.php(101): mysqli->query('SELECT TIME(NOW...')
+#1 {main}
+  thrown in C:\xampp\htdocs\employee-attendance\controller\admin\process_out_scan.php on line 101

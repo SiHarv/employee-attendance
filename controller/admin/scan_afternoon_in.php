@@ -41,13 +41,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
     
     $qrCode = $jsonData['qrCode'];
-    
-    // Check if the QR code exists in the users table
     $stmt = $conn->prepare("SELECT id, username FROM users WHERE code = ?");
     $stmt->bind_param("s", $qrCode);
     $stmt->execute();
     $result = $stmt->get_result();
-    
+
     if ($result->num_rows === 0) {
         echo json_encode([
             'success' => false,
@@ -55,27 +53,40 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         ]);
         exit;
     }
-    
+
     $employee = $result->fetch_assoc();
     $employee_id = $employee['id'];
     $employee_name = $employee['username'];
-    
+
     // Get current settings
     $settings = getSettings($conn);
 
     // Check if employee already logged in today (using DB server date)
-    $stmt = $conn->prepare("SELECT id FROM afternoon_time_log WHERE employee_id = ? AND DATE(time_in) = CURDATE()");
+    $stmt = $conn->prepare("SELECT id, time_out FROM afternoon_time_log WHERE employee_id = ? AND DATE(time_in) = CURDATE()");
     $stmt->bind_param("i", $employee_id);
     $stmt->execute();
-    if ($stmt->get_result()->num_rows > 0) {
-        echo json_encode([
-            'success' => false,
-            'message' => 'Already logged in for PM today.',
-            'employeeName' => $employee_name
-        ]);
-        exit;
+    $result = $stmt->get_result();
+    if ($result->num_rows > 0) {
+        $row = $result->fetch_assoc();
+        if (empty($row['time_out'])) {
+            // Allow another scan if time_out is empty (not yet timed out)
+            echo json_encode([
+                'success' => false,
+                'message' => 'Already logged in for PM today. Please time out before scanning again.',
+                'employeeName' => $employee_name
+            ]);
+            exit;
+        } else {
+            // Already has time_in and time_out for today
+            echo json_encode([
+                'success' => false,
+                'message' => 'Already logged in and timed out for PM today.',
+                'employeeName' => $employee_name
+            ]);
+            exit;
+        }
     }
-    
+
     // Insert with NOW() and determine status using SQL
     $sql = "
         INSERT INTO afternoon_time_log (employee_id, time_in, status)

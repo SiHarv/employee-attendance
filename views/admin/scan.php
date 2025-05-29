@@ -28,7 +28,7 @@ $result = $conn->query($recent_scans_query);
 $recent_scans = $result;
 
 // Get settings
-$settings_query = "SELECT set_am_time_in, set_am_time_out, set_pm_time_in FROM settings WHERE id = 1";
+$settings_query = "SELECT set_am_time_in, set_am_time_out, set_pm_time_in, set_pm_time_out FROM settings WHERE id = 1";
 $settings_result = $conn->query($settings_query);
 $settings = $settings_result->fetch_assoc();
 
@@ -37,7 +37,8 @@ if (!$settings) {
     $settings = [
         'set_am_time_in' => '08:00:00',
         'set_am_time_out' => '17:00:00',
-        'set_pm_time_in' => '13:00:00'
+        'set_pm_time_in' => '13:00:00',
+        'set_pm_time_out' => '17:00:00'
     ];
 }
 
@@ -146,8 +147,9 @@ document.addEventListener('DOMContentLoaded', function() {
     let sessionMode = 'am'; // 'am' or 'pm'
     const scanModeLabel = document.getElementById('scanModeLabel');
     const toggleModeBtn = document.getElementById('toggleModeBtn');
-    // Get PM time in from PHP
+    // Get PM time in/out from PHP
     const pmTimeInSetting = '<?php echo $settings['set_pm_time_in']; ?>';
+    const pmTimeOutSetting = '<?php echo $settings['set_pm_time_out']; ?>';
 
     function getCurrentTimeStr() {
         const now = new Date();
@@ -156,13 +158,17 @@ document.addEventListener('DOMContentLoaded', function() {
                now.getSeconds().toString().padStart(2, '0');
     }
 
-    function updateSessionMode() {
+    function updateSessionModeAndScanMode() {
         const nowStr = getCurrentTimeStr();
-        // Compare as strings (format HH:MM:SS)
+        // AM/PM session
         if (nowStr >= pmTimeInSetting) {
             sessionMode = 'pm';
         } else {
             sessionMode = 'am';
+        }
+        // Auto set scanMode to 'out' in PM if current time >= PM time out
+        if (sessionMode === 'pm' && nowStr >= pmTimeOutSetting) {
+            scanMode = 'out';
         }
     }
 
@@ -181,11 +187,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Update session mode and scan mode UI every minute
     setInterval(function() {
-        updateSessionMode();
+        updateSessionModeAndScanMode();
         updateScanModeUI();
     }, 60000);
     // Initial check
-    updateSessionMode();
+    updateSessionModeAndScanMode();
     updateScanModeUI();
 
     toggleModeBtn.addEventListener('click', function() {

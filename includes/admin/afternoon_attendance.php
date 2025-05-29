@@ -7,7 +7,34 @@ $endDate = isset($_GET['end_date']) ? $_GET['end_date'] : date('Y-m-d');
 $status = isset($_GET['status']) ? $_GET['status'] : 'all';
 $employeeId = isset($_GET['employee_id']) ? $_GET['employee_id'] : '';
 
-// Prepare query with filters - simpler query without pagination
+// Pagination parameters
+$page = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
+$rowsPerPage = isset($_GET['rows_per_page']) ? intval($_GET['rows_per_page']) : 6;
+$offset = ($page - 1) * $rowsPerPage;
+
+// Count total records for pagination
+$countQuery = "SELECT COUNT(*) as total FROM afternoon_time_log t 
+               JOIN users u ON t.employee_id = u.id 
+               WHERE 1=1";
+               
+if ($startDate) {
+    $countQuery .= " AND DATE(t.time_in) >= '$startDate'";
+}
+if ($endDate) {
+    $countQuery .= " AND DATE(t.time_in) <= '$endDate'";
+}
+if ($status && $status != 'all') {
+    $countQuery .= " AND t.status = '$status'";
+}
+if ($employeeId) {
+    $countQuery .= " AND t.employee_id = $employeeId";
+}
+
+$countResult = $conn->query($countQuery);
+$totalRecords = $countResult->fetch_assoc()['total'];
+$totalPages = ceil($totalRecords / $rowsPerPage);
+
+// Prepare query with filters - now with pagination
 $query = "SELECT t.*, u.username 
           FROM afternoon_time_log t 
           JOIN users u ON t.employee_id = u.id 
@@ -26,7 +53,7 @@ if ($employeeId) {
     $query .= " AND t.employee_id = $employeeId";
 }
 
-$query .= " ORDER BY t.time_in DESC";
+$query .= " ORDER BY t.time_in DESC LIMIT $rowsPerPage OFFSET $offset";
 $result = $conn->query($query);
 
 // Calculate statistics
@@ -59,6 +86,50 @@ if ($totalRecords > 0) {
     }
 }
 $avgHours = $totalRecords > 0 ? round($totalHours / $totalRecords, 2) : 0;
+
+// Calculate total hours per day for the user (combining both morning and afternoon)
+$query_total_hours = "
+    SELECT 
+        t_combined.employee_id,
+        t_combined.log_date,
+        SUM(t_combined.hours) AS total_hours
+    FROM (
+        -- Get hours from morning logs
+        SELECT 
+            employee_id,
+            DATE(time_in) AS log_date,
+            TIMESTAMPDIFF(HOUR, time_in, time_out) + 
+            TIMESTAMPDIFF(MINUTE, time_in, time_out) % 60 / 60 AS hours
+        FROM 
+            morning_time_log
+        WHERE 
+            time_out IS NOT NULL
+            
+        UNION ALL
+        
+        -- Get hours from afternoon logs
+        SELECT 
+            employee_id,
+            DATE(time_in) AS log_date,
+            TIMESTAMPDIFF(HOUR, time_in, time_out) + 
+            TIMESTAMPDIFF(MINUTE, time_in, time_out) % 60 / 60 AS hours
+        FROM 
+            afternoon_time_log
+        WHERE 
+            time_out IS NOT NULL
+    ) AS t_combined
+    GROUP BY 
+        t_combined.employee_id, t_combined.log_date";
+
+$total_hours_result = $conn->query($query_total_hours);
+$total_hours_by_employee = [];
+
+if ($total_hours_result && $total_hours_result->num_rows > 0) {
+    while ($row = $total_hours_result->fetch_assoc()) {
+        $key = $row['employee_id'] . '_' . $row['log_date'];
+        $total_hours_by_employee[$key] = round($row['total_hours'], 2);
+    }
+}
 ?>
 
 <div class="card shadow mb-4">
@@ -73,7 +144,7 @@ $avgHours = $totalRecords > 0 ? round($totalHours / $totalRecords, 2) : 0;
         </div>
     </div>
     <div class="card-body">
-        <div class="table-responsive">
+        <div class="table-responsive" id="afternoonReportTableContainer">
             <table class="table table-striped table-hover" id="afternoonReportTable">
                 <thead class="table-dark">
                     <tr>
@@ -82,6 +153,7 @@ $avgHours = $totalRecords > 0 ? round($totalHours / $totalRecords, 2) : 0;
                         <th>Time In</th>
                         <th>Time Out</th>
                         <th>Total Hours</th>
+                        <th>Total Hours Today</th>
                         <th>Status</th>
                         <th>Actions</th>
                     </tr>
@@ -89,7 +161,7 @@ $avgHours = $totalRecords > 0 ? round($totalHours / $totalRecords, 2) : 0;
                 <tbody>
                     <?php if (!$result || $result->num_rows == 0): ?>
                         <tr>
-                            <td colspan="7" class="text-center">No records found</td>
+                            <td colspan="8" class="text-center">No records found</td>
                         </tr>
                     <?php else: ?>
                         <?php 
@@ -106,6 +178,12 @@ $avgHours = $totalRecords > 0 ? round($totalHours / $totalRecords, 2) : 0;
                                 $hours = $interval->h + ($interval->i / 60);
                                 $hours = round($hours, 2) . ' hrs';
                             }
+
+                            // Get total hours for the employee on that day
+                            $date = date('Y-m-d', strtotime($row['time_in']));
+                            $key = $row['employee_id'] . '_' . $date;
+                            $total_hours_today = isset($total_hours_by_employee[$key]) ? 
+                                $total_hours_by_employee[$key] . ' hrs' : '-';
                             ?>
                             <tr>
                                 <td><?php echo htmlspecialchars($row['username']); ?></td>
@@ -113,6 +191,7 @@ $avgHours = $totalRecords > 0 ? round($totalHours / $totalRecords, 2) : 0;
                                 <td><?php echo date('h:i A', strtotime($row['time_in'])); ?></td>
                                 <td><?php echo $row['time_out'] ? date('h:i A', strtotime($row['time_out'])) : '-'; ?></td>
                                 <td><?php echo $hours; ?></td>
+                                <td><?php echo $total_hours_today; ?></td>
                                 <td>
                                     <span class="badge rounded-pill <?php 
                                         echo match($row['status']) {
@@ -136,6 +215,27 @@ $avgHours = $totalRecords > 0 ? round($totalHours / $totalRecords, 2) : 0;
                 </tbody>
             </table>
         </div>
+        
+        <!-- Pagination controls -->
+        <?php if ($totalPages > 1): ?>
+        <nav aria-label="Page navigation" class="mt-4">
+            <ul class="pagination justify-content-center">
+                <li class="page-item <?php echo ($page <= 1) ? 'disabled' : ''; ?>">
+                    <a class="page-link" href="#" data-page="<?php echo $page-1; ?>">Previous</a>
+                </li>
+                
+                <?php for ($i = 1; $i <= $totalPages; $i++): ?>
+                <li class="page-item <?php echo ($i == $page) ? 'active' : ''; ?>">
+                    <a class="page-link" href="#" data-page="<?php echo $i; ?>"><?php echo $i; ?></a>
+                </li>
+                <?php endfor; ?>
+                
+                <li class="page-item <?php echo ($page >= $totalPages) ? 'disabled' : ''; ?>">
+                    <a class="page-link" href="#" data-page="<?php echo $page+1; ?>">Next</a>
+                </li>
+            </ul>
+        </nav>
+        <?php endif; ?>
     </div>
     <div class="card-footer bg-white text-center">
         <p class="mt-2 mb-2">End of records</p>
@@ -144,12 +244,41 @@ $avgHours = $totalRecords > 0 ? round($totalHours / $totalRecords, 2) : 0;
 
 <script>
 $(document).ready(function() {
-    // Search functionality for afternoon
+    // Search functionality
     $("#searchAfternoonReport").on("keyup", function() {
         var value = $(this).val().toLowerCase();
         $("#afternoonReportTable tbody tr").filter(function() {
             $(this).toggle($(this).text().toLowerCase().indexOf(value) > -1);
         });
     });
+    
+    // Direct click handlers for each pagination link
+    $(".pagination .page-link").on("click", function(e) {
+        e.preventDefault();
+        var page = $(this).data("page");
+        loadAfternoonPage(page);
+    });
 });
+
+// Function to load a specific page of afternoon attendance
+function loadAfternoonPage(page) {
+    $.ajax({
+        url: '../../includes/admin/afternoon_attendance.php',
+        type: 'GET',
+        data: {
+            page: page,
+            rows_per_page: 6,
+            start_date: $('#start_date').val(),
+            end_date: $('#end_date').val(),
+            status: $('#status').val(),
+            employee_id: $('#employee_id').val()
+        },
+        success: function(response) {
+            $('#afternoonAttendanceContainer').html(response);
+        },
+        error: function(xhr, status, error) {
+            console.error("Error loading afternoon attendance: " + error);
+        }
+    });
+}
 </script>

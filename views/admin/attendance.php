@@ -150,16 +150,18 @@ if (!isset($_SESSION['admin_id'])) {
                                             </a>
                                         </div>
                                     </div>
+                                    <!-- Statistics Today -->
                                     <div class="col-md-6 text-md-end">
                                         <div class="btn-group" role="group">
-                                            <button type="button" class="btn btn-outline-primary" onclick="setDateRange('Morning')">Morning</button>
-                                            <button type="button" class="btn btn-outline-primary" onclick="setDateRange('Afternoon')">Afternoon</button>
+                                            <button type="button" class="btn btn-outline-primary active" id="morningBtn" onclick="setDateRange('Morning')">Morning</button>
+                                            <button type="button" class="btn btn-outline-primary" id="afternoonBtn" onclick="setDateRange('Afternoon')">Afternoon</button>
                                         </div>
+                                        <!-- Date Range Buttons -->
                                         <div class="btn-group" role="group">
-                                            <button type="button" class="btn btn-outline-primary" onclick="setDateRange('today')">Today</button>
-                                            <button type="button" class="btn btn-outline-primary" onclick="setDateRange('yesterday')">Yesterday</button>
-                                            <button type="button" class="btn btn-outline-primary" onclick="setDateRange('week')">This Week</button>
-                                            <button type="button" class="btn btn-outline-primary" onclick="setDateRange('month')">This Month</button>
+                                            <button type="button" class="btn btn-outline-primary" id="todayBtn" onclick="setDateRange('today')">Today</button>
+                                            <button type="button" class="btn btn-outline-primary" id="yesterdayBtn" onclick="setDateRange('yesterday')">Yesterday</button>
+                                            <button type="button" class="btn btn-outline-primary" id="weekBtn" onclick="setDateRange('week')">This Week</button>
+                                            <button type="button" class="btn btn-outline-primary" id="monthBtn" onclick="setDateRange('month')">This Month</button>
                                         </div>
                                     </div>
                                 </div>
@@ -184,16 +186,39 @@ if (!isset($_SESSION['admin_id'])) {
     <?php require_once 'modals/modal_edit_afternoon_attendance.php'; ?>
 
     <script>
+    // Initialize current attendance type
+    window.currentAttendanceType = 'morning';
+
     function setDateRange(type) {
-        if (type === 'Afternoon') {
-            document.getElementById('morningAttendanceContainer').style.display = 'none';
-            document.getElementById('afternoonAttendanceContainer').style.display = 'block';
-            window.currentAttendanceType = 'afternoon';
-        } else if (type === 'Morning') {
-            document.getElementById('morningAttendanceContainer').style.display = 'block';
-            document.getElementById('afternoonAttendanceContainer').style.display = 'none';
-            window.currentAttendanceType = 'morning';
+        if (type === 'Afternoon' || type === 'Morning') {
+            // Handle AM/PM toggle
+            if (type === 'Afternoon') {
+                document.getElementById('morningAttendanceContainer').style.display = 'none';
+                document.getElementById('afternoonAttendanceContainer').style.display = 'block';
+                window.currentAttendanceType = 'afternoon';
+                
+                // Update button active states for Morning/Afternoon only
+                document.getElementById('morningBtn').classList.remove('active');
+                document.getElementById('afternoonBtn').classList.add('active');
+            } else if (type === 'Morning') {
+                document.getElementById('morningAttendanceContainer').style.display = 'block';
+                document.getElementById('afternoonAttendanceContainer').style.display = 'none';
+                window.currentAttendanceType = 'morning';
+                
+                // Update button active states for Morning/Afternoon only
+                document.getElementById('morningBtn').classList.add('active');
+                document.getElementById('afternoonBtn').classList.remove('active');
+            }
         } else {
+            // For date range buttons, clear only other date range buttons' active state
+            document.getElementById('todayBtn').classList.remove('active');
+            document.getElementById('yesterdayBtn').classList.remove('active');
+            document.getElementById('weekBtn').classList.remove('active');
+            document.getElementById('monthBtn').classList.remove('active');
+            
+            // Set active state for the clicked date button
+            document.getElementById(type + 'Btn').classList.add('active');
+            
             // Handle date ranges (today, yesterday, etc.)
             const today = new Date();
             let startDate = new Date();
@@ -215,26 +240,26 @@ if (!isset($_SESSION['admin_id'])) {
                     break;
             }
             
-            document.getElementById('start_date').value = startDate.toISOString().split('T')[0];
-            document.getElementById('end_date').value = endDate.toISOString().split('T')[0];
+            // Set the date inputs
+            document.getElementById('start_date').value = formatDate(startDate);
+            document.getElementById('end_date').value = formatDate(endDate);
+            
+            // Refresh content using AJAX based on current active view
+            if (window.currentAttendanceType === 'afternoon') {
+                refreshAfternoonAttendance();
+            } else {
+                refreshMorningAttendance();
+            }
         }
     }
 
-    // Initialize current attendance type
-    window.currentAttendanceType = 'morning';
-
-    // Add event listener for the Afternoon button
-    document.addEventListener('DOMContentLoaded', function() {
-        const afternoonBtn = document.querySelector('button[onclick="setDateRange(\'Afternoon\')"]');
-        if (afternoonBtn) {
-            afternoonBtn.addEventListener('click', function() {
-                // Ensure the afternoon container is displayed
-                document.getElementById('morningAttendanceContainer').style.display = 'none';
-                document.getElementById('afternoonAttendanceContainer').style.display = 'block';
-                window.currentAttendanceType = 'afternoon';
-            });
-        }
-    });
+    // Function to format date as YYYY-MM-DD
+    function formatDate(date) {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    }
 
     // Overwrite editAttendance to handle both morning and afternoon
     function editAttendance(id, name, timeIn, timeOut, status) {
@@ -261,43 +286,153 @@ if (!isset($_SESSION['admin_id'])) {
         }
     }
 
-    // Save handler for afternoon attendance
-    document.addEventListener('DOMContentLoaded', function() {
-        var btn = document.getElementById('saveAfternoonAttendanceChanges');
-        if (btn) {
-            btn.addEventListener('click', function() {
-                const formData = {
-                    attendance_id: document.getElementById('edit_afternoon_attendance_id').value,
-                    time_in: document.getElementById('edit_afternoon_time_in').value.replace('T', ' '),
-                    time_out: document.getElementById('edit_afternoon_time_out').value.replace('T', ' '),
-                    status: document.getElementById('edit_afternoon_status').value,
-                    type: 'afternoon'
-                };
-                fetch('../../controller/admin/employee_edit_attendance.php', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify(formData)
-                })
-                .then(response => response.json())
-                .then(data => {
+    // Updated AJAX handlers for saving attendance changes
+    $(document).ready(function() {
+        // Save handler for morning attendance
+        $('#saveAttendanceChanges').on('click', function() {
+            const formData = {
+                attendance_id: $('#edit_attendance_id').val(),
+                time_in: $('#edit_time_in').val().replace('T', ' '),
+                time_out: $('#edit_time_out').val().replace('T', ' '),
+                status: $('#edit_status').val(),
+                type: 'morning'
+            };
+            
+            $.ajax({
+                url: '../../controller/admin/employee_edit_attendance.php',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify(formData),
+                success: function(data) {
                     if (data.success) {
-                        alert('Attendance updated successfully!');
-                        window.location.reload();
+                        // Show success message
+                        const alertDiv = $('<div class="alert alert-success alert-dismissible fade show" role="alert">')
+                            .text(data.message)
+                            .append('<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>');
+                        
+                        $('#morningAttendanceContainer').prepend(alertDiv);
+                        
+                        // Close the modal
+                        $('#editAttendanceModal').modal('hide');
+                        
+                        // Refresh only the morning attendance container
+                        refreshMorningAttendance();
+                        
+                        // Auto-dismiss the alert after 3 seconds
+                        setTimeout(function() {
+                            alertDiv.alert('close');
+                        }, 3000);
                     } else {
                         alert('Error: ' + data.message);
                     }
-                })
-                .catch(error => {
+                },
+                error: function(xhr, status, error) {
                     console.error('Error:', error);
                     alert('Error updating attendance');
-                });
+                }
+            });
+        });
+        
+        // Save handler for afternoon attendance
+        $('#saveAfternoonAttendanceChanges').on('click', function() {
+            const formData = {
+                attendance_id: $('#edit_afternoon_attendance_id').val(),
+                time_in: $('#edit_afternoon_time_in').val().replace('T', ' '),
+                time_out: $('#edit_afternoon_time_out').val().replace('T', ' '),
+                status: $('#edit_afternoon_status').val(),
+                type: 'afternoon'
+            };
+            
+            $.ajax({
+                url: '../../controller/admin/employee_edit_attendance.php',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify(formData),
+                success: function(data) {
+                    if (data.success) {
+                        // Show success message
+                        const alertDiv = $('<div class="alert alert-success alert-dismissible fade show" role="alert">')
+                            .text(data.message)
+                            .append('<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>');
+                        
+                        $('#afternoonAttendanceContainer').prepend(alertDiv);
+                        
+                        // Close the modal
+                        $('#editAfternoonAttendanceModal').modal('hide');
+                        
+                        // Refresh only the afternoon attendance container
+                        refreshAfternoonAttendance();
+                        
+                        // Auto-dismiss the alert after 3 seconds
+                        setTimeout(function() {
+                            alertDiv.alert('close');
+                        }, 3000);
+                    } else {
+                        alert('Error: ' + data.message);
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error('Error:', error);
+                    alert('Error updating attendance');
+                }
+            });
+        });
+
+        // Add event listener for the Afternoon button
+        const afternoonBtn = $('button[onclick="setDateRange(\'Afternoon\')"]');
+        if (afternoonBtn.length) {
+            afternoonBtn.click(function() {
+                // Ensure the afternoon container is displayed
+                $('#morningAttendanceContainer').hide();
+                $('#afternoonAttendanceContainer').show();
+                window.currentAttendanceType = 'afternoon';
             });
         }
     });
-    </script>
 
-    <?php //require_once '../../includes/admin/footer.php'; ?>
+    // Function to refresh the morning attendance section using AJAX
+    function refreshMorningAttendance() {
+        const params = {
+            start_date: $('#start_date').val(),
+            end_date: $('#end_date').val(),
+            status: $('#status').val(),
+            employee_id: $('#employee_id').val()
+        };
+        
+        $.get('../../includes/admin/morning_attendance.php', params, function(data) {
+            $('#morningAttendanceContainer').html(data);
+        });
+    }
+
+    // Function to refresh the afternoon attendance section using AJAX
+    function refreshAfternoonAttendance() {
+        const params = {
+            start_date: $('#start_date').val(),
+            end_date: $('#end_date').val(),
+            status: $('#status').val(),
+            employee_id: $('#employee_id').val()
+        };
+        
+        $.get('../../includes/admin/afternoon_attendance.php', params, function(data) {
+            $('#afternoonAttendanceContainer').html(data);
+        });
+    }
+    
+    // Initialize filter form to use AJAX instead of page reload
+    $(document).ready(function() {
+        $('#filterForm').on('submit', function(e) {
+            e.preventDefault();
+            
+            // Update both sections based on current view
+            if (window.currentAttendanceType === 'afternoon') {
+                refreshAfternoonAttendance();
+            } else {
+                refreshMorningAttendance();
+            }
+        });
+    });
+</script>
+
+<?php //require_once '../../includes/admin/footer.php'; ?>
 </body>
 </html>

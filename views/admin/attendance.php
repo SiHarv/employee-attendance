@@ -184,6 +184,57 @@ if (!isset($_SESSION['admin_id'])) {
     <?php require_once 'modals/modal_edit_afternoon_attendance.php'; ?>
 
     <script>
+    function setDateRange(type) {
+        if (type === 'Afternoon') {
+            document.getElementById('morningAttendanceContainer').style.display = 'none';
+            document.getElementById('afternoonAttendanceContainer').style.display = 'block';
+            window.currentAttendanceType = 'afternoon';
+        } else if (type === 'Morning') {
+            document.getElementById('morningAttendanceContainer').style.display = 'block';
+            document.getElementById('afternoonAttendanceContainer').style.display = 'none';
+            window.currentAttendanceType = 'morning';
+        } else {
+            // Handle date ranges (today, yesterday, etc.)
+            const today = new Date();
+            let startDate = new Date();
+            let endDate = new Date();
+            
+            switch(type) {
+                case 'today':
+                    // Start and end date are both today
+                    break;
+                case 'yesterday':
+                    startDate.setDate(today.getDate() - 1);
+                    endDate.setDate(today.getDate() - 1);
+                    break;
+                case 'week':
+                    startDate.setDate(today.getDate() - 7);
+                    break;
+                case 'month':
+                    startDate.setDate(today.getDate() - 30);
+                    break;
+            }
+            
+            document.getElementById('start_date').value = startDate.toISOString().split('T')[0];
+            document.getElementById('end_date').value = endDate.toISOString().split('T')[0];
+        }
+    }
+
+    // Initialize current attendance type
+    window.currentAttendanceType = 'morning';
+
+    // Add event listener for the Afternoon button
+    document.addEventListener('DOMContentLoaded', function() {
+        const afternoonBtn = document.querySelector('button[onclick="setDateRange(\'Afternoon\')"]');
+        if (afternoonBtn) {
+            afternoonBtn.addEventListener('click', function() {
+                // Ensure the afternoon container is displayed
+                document.getElementById('morningAttendanceContainer').style.display = 'none';
+                document.getElementById('afternoonAttendanceContainer').style.display = 'block';
+                window.currentAttendanceType = 'afternoon';
+            });
+        }
+    });
 
     // Overwrite editAttendance to handle both morning and afternoon
     function editAttendance(id, name, timeIn, timeOut, status) {

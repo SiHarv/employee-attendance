@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: May 29, 2025 at 06:21 PM
+-- Generation Time: May 29, 2025 at 08:55 PM
 -- Server version: 10.4.28-MariaDB
 -- PHP Version: 8.2.4
 
@@ -55,6 +55,14 @@ CREATE TABLE `afternoon_time_log` (
   `time_out` datetime DEFAULT NULL,
   `status` enum('present','late','absent') DEFAULT 'absent'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `afternoon_time_log`
+--
+
+INSERT INTO `afternoon_time_log` (`id`, `employee_id`, `time_in`, `time_out`, `status`) VALUES
+(1, 4, '2025-05-30 02:35:31', '2025-05-30 02:46:15', 'late'),
+(2, 12, '2025-05-30 02:53:47', '2025-05-30 02:54:07', 'late');
 
 -- --------------------------------------------------------
 
@@ -147,7 +155,9 @@ INSERT INTO `morning_time_log` (`id`, `employee_id`, `time_in`, `time_out`, `sta
 (88, 13, '2025-05-29 14:03:48', '2025-05-29 14:05:55', 'late'),
 (89, 14, '2025-05-29 14:17:03', NULL, 'late'),
 (90, 14, '2025-05-30 14:20:30', '2025-05-30 18:23:01', 'late'),
-(91, 4, '2025-05-29 20:10:32', '2025-05-29 23:54:00', 'present');
+(91, 4, '2025-05-29 20:10:32', '2025-05-29 23:54:00', 'present'),
+(106, 12, '2025-05-30 02:17:20', '2025-05-30 02:21:51', 'late'),
+(107, 4, '2025-05-30 02:21:08', '2025-05-30 02:22:02', 'late');
 
 -- --------------------------------------------------------
 
@@ -168,7 +178,7 @@ CREATE TABLE `settings` (
 --
 
 INSERT INTO `settings` (`id`, `set_am_time_in`, `set_am_time_out`, `set_pm_time_in`, `set_pm_time_out`) VALUES
-(1, '23:00:00', '12:00:00', '00:12:34', '00:00:01');
+(1, '02:00:00', '02:20:00', '01:40:00', '02:50:00');
 
 -- --------------------------------------------------------
 
@@ -255,10 +265,16 @@ ALTER TABLE `admin`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
 
 --
+-- AUTO_INCREMENT for table `afternoon_time_log`
+--
+ALTER TABLE `afternoon_time_log`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+
+--
 -- AUTO_INCREMENT for table `morning_time_log`
 --
 ALTER TABLE `morning_time_log`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=92;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=108;
 
 --
 -- AUTO_INCREMENT for table `settings`

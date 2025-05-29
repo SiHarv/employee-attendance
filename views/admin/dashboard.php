@@ -384,7 +384,7 @@
                                         <div class="mb-3">
                                             <i class="fas fa-clipboard-list fa-2x text-info"></i>
                                         </div>
-                                        <h6 class="mb-0">View Reports</h6>
+                                        <h6 class="mb-0">Attendance Reports</h6>
                                     </a>
                                 </div>
                                 <div class="col-md-3">

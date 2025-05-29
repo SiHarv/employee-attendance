@@ -227,8 +227,8 @@ if (!isset($_SESSION['admin_id'])) {
                                                         </span>
                                                     </td>
                                                     <td>
-                                                        <button class="btn btn-sm btn-info" onclick="viewDetails(<?php echo $row['id']; ?>)">
-                                                            <i class="bi bi-eye me-1"></i>View
+                                                        <button class="btn btn-sm btn-primary" onclick="editAttendance(<?php echo $row['id']; ?>, '<?php echo htmlspecialchars($row['username']); ?>', '<?php echo $row['time_in']; ?>', '<?php echo $row['time_out']; ?>', '<?php echo $row['status']; ?>')">
+                                                            <i class="bi bi-pencil me-1"></i>Edit
                                                         </button>
                                                     </td>
                                                 </tr>
@@ -246,6 +246,9 @@ if (!isset($_SESSION['admin_id'])) {
             </div>
         </div>
     </div>
+
+    <!-- Include the edit modal -->
+    <?php require_once 'modals/modal_edit_attendance.php'; ?>
 
     <script>
     $(document).ready(function() {
@@ -346,6 +349,52 @@ if (!isset($_SESSION['admin_id'])) {
         const day = String(date.getDate()).padStart(2, '0');
         return `${year}-${month}-${day}`;
     }
+
+    // Add this to your existing JavaScript
+    function editAttendance(id, name, timeIn, timeOut, status) {
+        document.getElementById('edit_attendance_id').value = id;
+        document.getElementById('edit_employee_name').value = name;
+        document.getElementById('edit_time_in').value = timeIn.replace(' ', 'T');
+        if (timeOut) {
+            document.getElementById('edit_time_out').value = timeOut.replace(' ', 'T');
+        } else {
+            document.getElementById('edit_time_out').value = '';
+        }
+        document.getElementById('edit_status').value = status;
+        
+        new bootstrap.Modal(document.getElementById('editAttendanceModal')).show();
+    }
+
+    document.getElementById('saveAttendanceChanges').addEventListener('click', function() {
+        const form = document.getElementById('editAttendanceForm');
+        const formData = {
+            attendance_id: document.getElementById('edit_attendance_id').value,
+            time_in: document.getElementById('edit_time_in').value.replace('T', ' '),
+            time_out: document.getElementById('edit_time_out').value.replace('T', ' '),
+            status: document.getElementById('edit_status').value
+        };
+
+        fetch('../../controller/admin/employee_edit_attendance.php', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(formData)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('Attendance updated successfully!');
+                window.location.reload();
+            } else {
+                alert('Error: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error updating attendance');
+        });
+    });
     </script>
 
     <?php //require_once '../../includes/admin/footer.php'; ?>

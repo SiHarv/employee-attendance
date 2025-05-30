@@ -38,39 +38,71 @@ $settings = getSettings($conn);
 // Current time
 $current_time = date('H:i:s');
 
-// Determine session and recommended mode
-$session = 'am'; // default
-$recommended_mode = 'in'; // default
+// Determine time periods and recommended modes
+// Default to morning in
+$session = 'am';
+$recommended_mode = 'in';
+$auto_switch = false;
+$force_switch = false;
 
-// PM session (after PM time in)
-if ($current_time >= $settings['set_pm_time_in']) {
+// Define time boundaries (with buffer periods)
+// Buffer helps with transition periods
+$morning_time_in_start = '05:00:00'; // Early morning
+$morning_time_in_end = $settings['set_am_time_out'];
+$morning_time_out_start = $settings['set_am_time_out'];
+$morning_time_out_end = $settings['set_pm_time_in']; 
+
+$afternoon_time_in_start = $settings['set_pm_time_in'];
+$afternoon_time_in_end = date('H:i:s', strtotime($settings['set_pm_time_out']) - (30 * 60)); // 30 min before PM out
+$afternoon_time_out_start = date('H:i:s', strtotime($settings['set_pm_time_out']) - (30 * 60)); // 30 min before PM out
+$afternoon_time_out_end = '23:59:59';
+
+// Determine session and mode
+if ($current_time >= $afternoon_time_in_start && $current_time < $afternoon_time_out_start) {
+    // Afternoon Time In period
     $session = 'pm';
-    
-    // If after PM time out, recommend time out
+    $recommended_mode = 'in';
+    $auto_switch = true;
+} 
+elseif ($current_time >= $afternoon_time_out_start) {
+    // Afternoon Time Out period
+    $session = 'pm';
+    $recommended_mode = 'out';
+    $auto_switch = true;
+    // Force switch when it's definitely PM out time
     if ($current_time >= $settings['set_pm_time_out']) {
-        $recommended_mode = 'out';
+        $force_switch = true;
     }
 } 
-// AM session
-else {
+elseif ($current_time >= $morning_time_out_start && $current_time < $afternoon_time_in_start) {
+    // Morning Time Out period
     $session = 'am';
-    
-    // If after AM time out, recommend time out
-    if ($current_time >= $settings['set_am_time_out']) {
-        $recommended_mode = 'out';
+    $recommended_mode = 'out';
+    $auto_switch = true;
+    // Force switch when it's definitely AM out time
+    if ($current_time >= date('H:i:s', strtotime($settings['set_am_time_out']) + (15 * 60))) { // 15 min after AM out
+        $force_switch = true;
     }
+} 
+else {
+    // Morning Time In period (default)
+    $session = 'am';
+    $recommended_mode = 'in';
+    $auto_switch = true;
 }
 
 echo json_encode([
     'success' => true,
     'current_time' => $current_time,
-    'formatted_time' => date('h:i A'),
+    'formatted_time' => date('g:i A'), // Changed from h:i A to g:i A to remove leading zero in hour
     'session' => $session,
     'recommended_mode' => $recommended_mode,
+    'auto_switch' => $auto_switch,     // Whether auto-switching is recommended
+    'force_switch' => $force_switch,   // Whether to force the switch (override user selection)
     'settings' => [
-        'am_time_in' => date('h:i A', strtotime($settings['set_am_time_in'])),
-        'am_time_out' => date('h:i A', strtotime($settings['set_am_time_out'])),
-        'pm_time_in' => date('h:i A', strtotime($settings['set_pm_time_in'])),
-        'pm_time_out' => date('h:i A', strtotime($settings['set_pm_time_out'])),
+        'am_time_in' => date('g:i A', strtotime($settings['set_am_time_in'])),
+        'am_time_out' => date('g:i A', strtotime($settings['set_am_time_out'])),
+        'pm_time_in' => date('g:i A', strtotime($settings['set_pm_time_in'])),
+        'pm_time_out' => date('g:i A', strtotime($settings['set_pm_time_out'])),
     ]
 ]);

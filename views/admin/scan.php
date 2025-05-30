@@ -172,7 +172,12 @@ document.addEventListener('DOMContentLoaded', function() {
     // Initialize live clock
     function updateLiveClock() {
         const now = new Date();
-        const timeString = now.toLocaleTimeString();
+        // Format to consistently show only hours and minutes in 12-hour format with AM/PM
+        const hours = now.getHours() % 12 || 12; // Convert 0 to 12 for 12 AM
+        const minutes = now.getMinutes().toString().padStart(2, '0');
+        const ampm = now.getHours() >= 12 ? 'PM' : 'AM';
+        const timeString = `${hours}:${minutes} ${ampm}`;
+        
         if(liveClockElement) {
             liveClockElement.textContent = timeString;
         }
@@ -189,6 +194,62 @@ document.addEventListener('DOMContentLoaded', function() {
                now.getSeconds().toString().padStart(2, '0');
     }
 
+    // Auto-check current session and mode from server
+    function checkAutomaticModeSwitch() {
+        $.ajax({
+            url: '../../controller/admin/scan_auto_switch.php',
+            type: 'GET',
+            dataType: 'json',
+            success: function(data) {
+                if (data.success) {
+                    // Update session mode (AM or PM)
+                    let previousSessionMode = sessionMode;
+                    let previousScanMode = scanMode;
+                    
+                    // Get new session and mode info
+                    sessionMode = data.session;
+                    
+                    // Only auto-switch if recommended by server AND
+                    // either the session changed or force_switch is true
+                    if (data.auto_switch && (previousSessionMode !== sessionMode || data.force_switch)) {
+                        scanMode = data.recommended_mode;
+                        
+                        // Log that auto-switching happened (for debugging)
+                        console.log('Auto-switched to:', sessionMode, scanMode, 'at', data.formatted_time);
+                    }
+                    
+                    // Update UI to reflect current mode
+                    updateScanModeUI();
+                    
+                    // DO NOT update the live clock from server response - only use JavaScript clock
+                    // REMOVED: liveClockElement.textContent = data.formatted_time;
+                    
+                    // If the mode changed, we could also show a notification
+                    if (previousSessionMode !== sessionMode || previousScanMode !== scanMode) {
+                        let notificationText = '';
+                        
+                        if (previousSessionMode !== sessionMode) {
+                            notificationText = 'Switched to ' + 
+                                (sessionMode === 'am' ? 'morning' : 'afternoon') + ' session';
+                        } else if (previousScanMode !== scanMode) {
+                            notificationText = 'Switched to ' + 
+                                (scanMode === 'in' ? 'Time In' : 'Time Out') + ' mode';
+                        }
+                        
+                        // Show a subtle notification
+                        if (notificationText && scanResult.style.display === 'none') {
+                            showScanResult('info', 'Auto-switch: ' + notificationText);
+                            setTimeout(function() { scanResult.style.display = 'none'; }, 2000);
+                        }
+                    }
+                }
+            },
+            error: function(xhr, status, error) {
+                console.error('Error checking automatic mode:', error);
+            }
+        });
+    }
+    
     // Function to update UI based on mode
     function updateScanModeUI() {
         if (scanMode === 'in') {
@@ -203,7 +264,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         } else {
             if (sessionMode === 'am') {
-                scanModeLabel.textContent = 'Moring Time Out';
+                scanModeLabel.textContent = 'Morning Time Out';
                 scanModeLabel.className = 'ms-2 badge bg-danger';
                 toggleModeBtn.textContent = 'Switch to Time In';
             } else {
@@ -212,33 +273,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 toggleModeBtn.textContent = 'Switch to Afternoon In';
             }
         }
-    }
-
-    // Auto-check current session and mode from server
-    function checkAutomaticModeSwitch() {
-        $.ajax({
-            url: '../../controller/admin/scan_auto_switch.php',
-            type: 'GET',
-            dataType: 'json',
-            success: function(data) {
-                if (data.success) {
-                    // Update session mode (AM or PM)
-                    sessionMode = data.session;
-                    
-                    // Auto-switch scan mode if needed (but don't override manual selection)
-                    // Only auto-switch if the server strongly recommends it (like after official time out time)
-                    if (data.recommended_mode === 'out') {
-                        scanMode = 'out';
-                    }
-                    
-                    // Update UI to reflect current mode
-                    updateScanModeUI();
-                }
-            },
-            error: function(xhr, status, error) {
-                console.error('Error checking automatic mode:', error);
-            }
-        });
     }
     
     // Run mode check every 2 seconds

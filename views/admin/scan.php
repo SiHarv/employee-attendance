@@ -191,44 +191,100 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function updateSessionModeAndScanMode() {
         const nowStr = getCurrentTimeStr();
-        // AM/PM session
+        
+        // First determine the session (AM or PM)
         if (nowStr >= pmTimeInSetting) {
             sessionMode = 'pm';
         } else {
             sessionMode = 'am';
         }
-        // Auto set scanMode to 'out' in PM if current time >= PM time out
-        if (sessionMode === 'pm' && nowStr >= pmTimeOutSetting) {
-            scanMode = 'out';
-        }
-    }
-
-    function updateScanModeUI() {
-        // Update UI elements based on scan mode and session mode
-        if (scanMode === 'in') {
-            scanModeLabel.textContent = sessionMode === 'am' ? 'Time In' : 'Afternoon In';
-            scanModeLabel.className = sessionMode === 'am' ? 'ms-2 badge bg-primary' : 'ms-2 badge bg-warning';
-            toggleModeBtn.textContent = sessionMode === 'am' ? 'Switch to Time Out' : 'Switch to Afternoon Out';
+        
+        // Then update UI based on specific time checks
+        if (sessionMode === 'pm') {
+            // PM logic
+            if (nowStr >= pmTimeOutSetting) {
+                // Time for afternoon out
+                scanMode = 'out';
+                scanModeLabel.textContent = 'Afternoon Out';
+                scanModeLabel.className = 'ms-2 badge bg-danger';
+                toggleModeBtn.textContent = 'Switch to Afternoon In';
+            } else {
+                // Before PM out time, default to Afternoon In
+                if (scanMode === 'in') {
+                    scanModeLabel.textContent = 'Afternoon In';
+                    scanModeLabel.className = 'ms-2 badge bg-warning';
+                    toggleModeBtn.textContent = 'Switch to Afternoon Out';
+                } else {
+                    scanModeLabel.textContent = 'Afternoon Out';
+                    scanModeLabel.className = 'ms-2 badge bg-danger';
+                    toggleModeBtn.textContent = 'Switch to Afternoon In';
+                }
+            }
         } else {
-            scanModeLabel.textContent = sessionMode === 'am' ? 'Time Out' : 'Afternoon Out';
-            scanModeLabel.className = 'ms-2 badge bg-danger';
-            toggleModeBtn.textContent = 'Switch to Time In';
+            // AM logic
+            if (nowStr >= amTimeOutSetting) {
+                // Time for morning out
+                scanMode = 'out';
+                scanModeLabel.textContent = 'Time Out';
+                scanModeLabel.className = 'ms-2 badge bg-danger';
+                toggleModeBtn.textContent = 'Switch to Time In';
+            } else {
+                // Before AM out time, default to Time In
+                if (scanMode === 'in') {
+                    scanModeLabel.textContent = 'Time In';
+                    scanModeLabel.className = 'ms-2 badge bg-primary';
+                    toggleModeBtn.textContent = 'Switch to Time Out';
+                } else {
+                    scanModeLabel.textContent = 'Time Out';
+                    scanModeLabel.className = 'ms-2 badge bg-danger';
+                    toggleModeBtn.textContent = 'Switch to Time In';
+                }
+            }
         }
     }
 
-    // Update session mode and scan mode UI every minute
-    setInterval(function() {
-        updateSessionModeAndScanMode();
-        updateScanModeUI();
-    }, 60000);
-    // Initial check
-    updateSessionModeAndScanMode();
-    updateScanModeUI();
+    // We'll replace the updateScanModeUI function with this more comprehensive approach
+    function updateScanModeUI() {
+        if (scanMode === 'in') {
+            if (sessionMode === 'am') {
+                scanModeLabel.textContent = 'Time In';
+                scanModeLabel.className = 'ms-2 badge bg-primary';
+                toggleModeBtn.textContent = 'Switch to Time Out';
+            } else {
+                scanModeLabel.textContent = 'Afternoon In';
+                scanModeLabel.className = 'ms-2 badge bg-warning';
+                toggleModeBtn.textContent = 'Switch to Afternoon Out';
+            }
+        } else {
+            if (sessionMode === 'am') {
+                scanModeLabel.textContent = 'Time Out';
+                scanModeLabel.className = 'ms-2 badge bg-danger';
+                toggleModeBtn.textContent = 'Switch to Time In';
+            } else {
+                scanModeLabel.textContent = 'Afternoon Out';
+                scanModeLabel.className = 'ms-2 badge bg-danger';
+                toggleModeBtn.textContent = 'Switch to Afternoon In';
+            }
+        }
+    }
 
+    // Reset autoSwitchToTimeOut function since it's now handled by updateSessionModeAndScanMode
+    function autoSwitchToTimeOut() {
+        // This functionality is now handled by updateSessionModeAndScanMode
+        updateSessionModeAndScanMode();
+    }
+
+    // Toggle button action
     toggleModeBtn.addEventListener('click', function() {
         scanMode = (scanMode === 'in') ? 'out' : 'in';
         updateScanModeUI();
     });
+    
+    // Initial checks
+    updateSessionModeAndScanMode();
+    
+    // Set more frequent checks (every 10 seconds instead of every minute)
+    setInterval(updateSessionModeAndScanMode, 10000);
 
     function showScanResult(type, message) {
         scanResult.style.display = 'block';

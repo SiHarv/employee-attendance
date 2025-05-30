@@ -48,9 +48,11 @@ if (!$settings) {
 $set_am_time_out = $settings['set_am_time_out'];
 $threshold_minute = $settings['threshold_minute'];
 
-// Format time for display
-$expected_time = date('h:i A', strtotime($settings['set_am_time_in']));
-$late_time = date('h:i A', strtotime($settings['set_am_time_in']) + ($threshold_minute * 60));
+// Format times for display
+$am_expected_time = date('h:i A', strtotime($settings['set_am_time_in']));
+$am_late_time = date('h:i A', strtotime($settings['set_am_time_in']) + ($threshold_minute * 60));
+$pm_expected_time = date('h:i A', strtotime($settings['set_pm_time_in']));
+$pm_late_time = date('h:i A', strtotime($settings['set_pm_time_in']) + ($threshold_minute * 60));
 ?>
 
 <div class="main-content">
@@ -60,8 +62,12 @@ $late_time = date('h:i A', strtotime($settings['set_am_time_in']) + ($threshold_
                 <div class="card shadow-lg border-0">
                     <div class="card-body">
                         <div class="alert alert-info mb-4">
+                            <p class="mb-2">
+                                <strong>Morning Late After:</strong> <?php echo $am_late_time; ?> 
+                                (<?php echo $threshold_minute; ?> min threshold)
+                            </p>
                             <p class="mb-0">
-                                <strong>Late After:</strong> <?php echo $late_time; ?> 
+                                <strong>Afternoon Late After:</strong> <?php echo $pm_late_time; ?> 
                                 (<?php echo $threshold_minute; ?> min threshold)
                             </p>
                         </div>

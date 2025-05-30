@@ -32,7 +32,7 @@ $result = $conn->query($recent_scans_query);
 $recent_scans = $result;
 
 // Get settings
-$settings_query = "SELECT set_am_time_in, set_am_time_out, set_pm_time_in, set_pm_time_out FROM settings WHERE id = 1";
+$settings_query = "SELECT set_am_time_in, set_am_time_out, set_pm_time_in, set_pm_time_out, threshold_minute FROM settings WHERE id = 1";
 $settings_result = $conn->query($settings_query);
 $settings = $settings_result->fetch_assoc();
 
@@ -41,15 +41,15 @@ if (!$settings) {
         'set_am_time_in' => '08:00:00',
         'set_am_time_out' => '17:00:00',
         'set_pm_time_in' => '13:00:00',
-        'set_pm_time_out' => '17:00:00'
+        'set_pm_time_out' => '17:00:00',
+        'threshold_minute' => 15
     ];
 }
 $set_am_time_out = $settings['set_am_time_out'];
+$threshold_minute = $settings['threshold_minute'];
 
 // Format time for display
 $expected_time = date('h:i A', strtotime($settings['set_am_time_in']));
-// No threshold_minute in settings table now, using fixed 15 minutes for late threshold
-$threshold_minute = 15;
 $late_time = date('h:i A', strtotime($settings['set_am_time_in']) + ($threshold_minute * 60));
 ?>
 
@@ -63,6 +63,9 @@ $late_time = date('h:i A', strtotime($settings['set_am_time_in']) + ($threshold_
                             <p class="mb-0">
                                 <strong>Late After:</strong> <?php echo $late_time; ?> 
                                 (<?php echo $threshold_minute; ?> min threshold)
+                            </p>
+                            <p class="mb-0" id="current-time-display">
+                                <strong>Current Time:</strong> <span id="live-clock"></span>
                             </p>
                         </div>
                         <!-- Scanner -->
@@ -83,7 +86,7 @@ $late_time = date('h:i A', strtotime($settings['set_am_time_in']) + ($threshold_
                                         <button class="btn btn-outline-secondary" id="toggleModeBtn" type="button">
                                             Switch to Time Out
                                         </button>
-                                        <span id="scanModeLabel" class="ms-2 badge bg-primary">Time In</span>
+                                        <span id="scanModeLabel" class="ms-2 badge bg-primary">Morning Time In</span>
                                     </div>
                                 </div>
                             </div>
@@ -154,6 +157,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const cameraSelect = document.getElementById('cameraSelect');
     const scanResult = document.getElementById('scan-result');
     const preview = document.getElementById('preview');
+    const liveClockElement = document.getElementById('live-clock');
     let scanner = null;
     let scanMode = 'in'; // 'in' or 'out'
     let sessionMode = 'am'; // 'am' or 'pm'
@@ -165,6 +169,19 @@ document.addEventListener('DOMContentLoaded', function() {
     // Get AM time out from PHP
     const amTimeOutSetting = "<?php echo $set_am_time_out; ?>";
 
+    // Initialize live clock
+    function updateLiveClock() {
+        const now = new Date();
+        const timeString = now.toLocaleTimeString();
+        if(liveClockElement) {
+            liveClockElement.textContent = timeString;
+        }
+    }
+    
+    // Start live clock
+    updateLiveClock();
+    setInterval(updateLiveClock, 1000);
+
     function getCurrentTimeStr() {
         const now = new Date();
         return now.getHours().toString().padStart(2, '0') + ':' +
@@ -172,131 +189,67 @@ document.addEventListener('DOMContentLoaded', function() {
                now.getSeconds().toString().padStart(2, '0');
     }
 
-    // Automatic switch to Time Out if current time >= settings.set_am_time_out
-    function autoSwitchToTimeOut() {
-        const nowStr = getCurrentTimeStr();
-        if (nowStr >= amTimeOutSetting) {
-            scanMode = 'out';
-            if (typeof scanModeLabel !== 'undefined') {
-                scanModeLabel.textContent = 'Time Out';
-                scanModeLabel.className = 'ms-2 badge bg-danger';
-            }
-            if (typeof toggleModeBtn !== 'undefined') {
-                toggleModeBtn.textContent = 'Switch to Time In';
-            }
-        } else {
-            scanMode = 'in';
-            if (typeof scanModeLabel !== 'undefined') {
-                scanModeLabel.textContent = 'Time In';
-                scanModeLabel.className = 'ms-2 badge bg-primary';
-            }
-            if (typeof toggleModeBtn !== 'undefined') {
-                toggleModeBtn.textContent = 'Switch to Time Out';
-            }
-        }
-    }
-
-    // Initial check
-    autoSwitchToTimeOut();
-    // Optionally, check every minute in case the page is left open
-    setInterval(autoSwitchToTimeOut, 60000);
-
-    function updateSessionModeAndScanMode() {
-        const nowStr = getCurrentTimeStr();
-        
-        // First determine the session (AM or PM)
-        if (nowStr >= pmTimeInSetting) {
-            sessionMode = 'pm';
-        } else {
-            sessionMode = 'am';
-        }
-        
-        // Then update UI based on specific time checks
-        if (sessionMode === 'pm') {
-            // PM logic
-            if (nowStr >= pmTimeOutSetting) {
-                // Time for afternoon out
-                scanMode = 'out';
-                scanModeLabel.textContent = 'Afternoon Out';
-                scanModeLabel.className = 'ms-2 badge bg-danger';
-                toggleModeBtn.textContent = 'Switch to Afternoon In';
-            } else {
-                // Before PM out time, default to Afternoon In
-                if (scanMode === 'in') {
-                    scanModeLabel.textContent = 'Afternoon In';
-                    scanModeLabel.className = 'ms-2 badge bg-warning';
-                    toggleModeBtn.textContent = 'Switch to Afternoon Out';
-                } else {
-                    scanModeLabel.textContent = 'Afternoon Out';
-                    scanModeLabel.className = 'ms-2 badge bg-danger';
-                    toggleModeBtn.textContent = 'Switch to Afternoon In';
-                }
-            }
-        } else {
-            // AM logic
-            if (nowStr >= amTimeOutSetting) {
-                // Time for morning out
-                scanMode = 'out';
-                scanModeLabel.textContent = 'Time Out';
-                scanModeLabel.className = 'ms-2 badge bg-danger';
-                toggleModeBtn.textContent = 'Switch to Time In';
-            } else {
-                // Before AM out time, default to Time In
-                if (scanMode === 'in') {
-                    scanModeLabel.textContent = 'Time In';
-                    scanModeLabel.className = 'ms-2 badge bg-primary';
-                    toggleModeBtn.textContent = 'Switch to Time Out';
-                } else {
-                    scanModeLabel.textContent = 'Time Out';
-                    scanModeLabel.className = 'ms-2 badge bg-danger';
-                    toggleModeBtn.textContent = 'Switch to Time In';
-                }
-            }
-        }
-    }
-
-    // We'll replace the updateScanModeUI function with this more comprehensive approach
+    // Function to update UI based on mode
     function updateScanModeUI() {
         if (scanMode === 'in') {
             if (sessionMode === 'am') {
-                scanModeLabel.textContent = 'Time In';
+                scanModeLabel.textContent = 'Morning Time In';
                 scanModeLabel.className = 'ms-2 badge bg-primary';
                 toggleModeBtn.textContent = 'Switch to Time Out';
             } else {
-                scanModeLabel.textContent = 'Afternoon In';
+                scanModeLabel.textContent = 'Afternoon Time In';
                 scanModeLabel.className = 'ms-2 badge bg-warning';
                 toggleModeBtn.textContent = 'Switch to Afternoon Out';
             }
         } else {
             if (sessionMode === 'am') {
-                scanModeLabel.textContent = 'Time Out';
+                scanModeLabel.textContent = 'Moring Time Out';
                 scanModeLabel.className = 'ms-2 badge bg-danger';
                 toggleModeBtn.textContent = 'Switch to Time In';
             } else {
-                scanModeLabel.textContent = 'Afternoon Out';
+                scanModeLabel.textContent = 'Afternoon Time Out';
                 scanModeLabel.className = 'ms-2 badge bg-danger';
                 toggleModeBtn.textContent = 'Switch to Afternoon In';
             }
         }
     }
 
-    // Reset autoSwitchToTimeOut function since it's now handled by updateSessionModeAndScanMode
-    function autoSwitchToTimeOut() {
-        // This functionality is now handled by updateSessionModeAndScanMode
-        updateSessionModeAndScanMode();
+    // Auto-check current session and mode from server
+    function checkAutomaticModeSwitch() {
+        $.ajax({
+            url: '../../controller/admin/scan_auto_switch.php',
+            type: 'GET',
+            dataType: 'json',
+            success: function(data) {
+                if (data.success) {
+                    // Update session mode (AM or PM)
+                    sessionMode = data.session;
+                    
+                    // Auto-switch scan mode if needed (but don't override manual selection)
+                    // Only auto-switch if the server strongly recommends it (like after official time out time)
+                    if (data.recommended_mode === 'out') {
+                        scanMode = 'out';
+                    }
+                    
+                    // Update UI to reflect current mode
+                    updateScanModeUI();
+                }
+            },
+            error: function(xhr, status, error) {
+                console.error('Error checking automatic mode:', error);
+            }
+        });
     }
+    
+    // Run mode check every 2 seconds
+    checkAutomaticModeSwitch(); // Initial check
+    setInterval(checkAutomaticModeSwitch, 2000);
 
     // Toggle button action
     toggleModeBtn.addEventListener('click', function() {
         scanMode = (scanMode === 'in') ? 'out' : 'in';
         updateScanModeUI();
     });
-    
-    // Initial checks
-    updateSessionModeAndScanMode();
-    
-    // Set more frequent checks (every 10 seconds instead of every minute)
-    setInterval(updateSessionModeAndScanMode, 10000);
 
     function showScanResult(type, message) {
         scanResult.style.display = 'block';
@@ -344,7 +297,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             if (data.success) {
                 showScanResult('success', data.message + (data.time ? '<br><b>Time:</b> ' + data.time : ''));
-                setTimeout(function() { window.location.reload(); }, 2000);
+                refreshRecentScans(); // Immediately refresh scans
             } else if (data.comebackTime) {
                 showScanResult('info', data.message + '<br><b>Come back at:</b> ' + data.comebackTime);
                 if (data.message) console.error('Scan error:', data.message);
@@ -462,7 +415,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     }
                     
                     // Update last refresh time
-                    $('#last-update-time').text('(Last updated: ' + new Date().toLocaleTimeString() + ')');
+                    //$('#last-update-time').text('(Last updated: ' + new Date().toLocaleTimeString() + ')');
                 }
             },
             error: function(xhr, status, error) {

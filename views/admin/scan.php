@@ -13,16 +13,20 @@ require_once '../../db/connect.php';
 
 // Get recent scans for the day
 $today = date('Y-m-d');
-$recent_scans_query = "SELECT tl.*, u.username, u.code 
+$recent_scans_query = "SELECT tl.*, u.username, u.code, 
+                      CASE 
+                        WHEN tl.source = 'morning' THEN 'Morning'
+                        WHEN tl.source = 'afternoon' THEN 'Afternoon'
+                      END AS period_label
                       FROM (
-                          SELECT * FROM morning_time_log
+                          SELECT *, 'morning' as source FROM morning_time_log
                           WHERE DATE(time_in) = CURDATE()
                           UNION ALL
-                          SELECT * FROM afternoon_time_log
+                          SELECT *, 'afternoon' as source FROM afternoon_time_log
                           WHERE DATE(time_in) = CURDATE()
                       ) tl 
                       JOIN users u ON tl.employee_id = u.id 
-                      ORDER BY tl.id DESC, tl.time_in DESC 
+                      ORDER BY tl.time_in DESC 
                       LIMIT 10";
 $result = $conn->query($recent_scans_query);
 $recent_scans = $result;
@@ -88,7 +92,7 @@ $late_time = date('h:i A', strtotime($settings['set_am_time_in']) + ($threshold_
                         <div id="scan-result" class="mt-3 p-3 text-center" style="display:none;"></div>
                         <!-- Recent Scans -->
                         <div class="mt-4">
-                            <h4 class="mb-3">Recent Scans Today</h4>
+                            <h4 class="mb-3">Recent Scans Today <small><span id="last-update-time" class="text-muted"></span></small></h4>
                             <div class="table-responsive">
                                 <table class="table table-hover">
                                     <thead>
@@ -96,6 +100,7 @@ $late_time = date('h:i A', strtotime($settings['set_am_time_in']) + ($threshold_
                                             <th>Employee</th>
                                             <th>Time In</th>
                                             <th>Time Out</th>
+                                            <th>Period</th>
                                             <th>Status</th>
                                         </tr>
                                     </thead>
@@ -109,6 +114,13 @@ $late_time = date('h:i A', strtotime($settings['set_am_time_in']) + ($threshold_
                                                         <?php echo $scan['time_out'] ? date('h:i A', strtotime($scan['time_out'])) : '-'; ?>
                                                     </td>
                                                     <td>
+                                                        <?php if ($scan['source'] === 'morning'): ?>
+                                                            <span class="badge bg-primary">Morning</span>
+                                                        <?php else: ?>
+                                                            <span class="badge bg-warning text-dark">Afternoon</span>
+                                                        <?php endif; ?>
+                                                    </td>
+                                                    <td>
                                                         <?php if ($scan['status'] === 'present'): ?>
                                                             <span class="badge bg-success">Present</span>
                                                         <?php else: ?>
@@ -119,7 +131,7 @@ $late_time = date('h:i A', strtotime($settings['set_am_time_in']) + ($threshold_
                                             <?php endwhile; ?>
                                         <?php else: ?>
                                             <tr>
-                                                <td colspan="4" class="text-center">No scans recorded today</td>
+                                                <td colspan="5" class="text-center">No scans recorded today</td>
                                             </tr>
                                         <?php endif; ?>
                                     </tbody>
@@ -410,6 +422,70 @@ document.addEventListener('DOMContentLoaded', function() {
         showScanResult('error', 'Error accessing camera: ' + e);
         startButton.disabled = true;
     });
+    
+    // AJAX function to refresh the recent scans table
+    function refreshRecentScans() {
+        $.ajax({
+            url: '../../controller/admin/get_recent_scans.php',
+            type: 'GET',
+            dataType: 'json',
+            success: function(data) {
+                if (data.success) {
+                    // Update the table with new data
+                    var tableBody = $('#recent-scans-list');
+                    tableBody.empty();
+                    
+                    if (data.scans.length > 0) {
+                        // Add each scan to the table
+                        $.each(data.scans, function(index, scan) {
+                            var timeOut = scan.time_out ? formatTime(scan.time_out) : '-';
+                            var periodBadge = scan.source === 'morning' ? 
+                                '<span class="badge bg-primary">Morning</span>' : 
+                                '<span class="badge bg-warning text-dark">Afternoon</span>';
+                            var statusBadge = scan.status === 'present' ? 
+                                '<span class="badge bg-success">Present</span>' : 
+                                '<span class="badge bg-warning text-dark">Late</span>';
+                            
+                            var row = '<tr>' + 
+                                '<td>' + scan.username + '</td>' +
+                                '<td>' + formatTime(scan.time_in) + '</td>' +
+                                '<td>' + timeOut + '</td>' +
+                                '<td>' + periodBadge + '</td>' +
+                                '<td>' + statusBadge + '</td>' +
+                                '</tr>';
+                                
+                            tableBody.append(row);
+                        });
+                    } else {
+                        // Show "No scans" message if no data
+                        tableBody.append('<tr><td colspan="5" class="text-center">No scans recorded today</td></tr>');
+                    }
+                    
+                    // Update last refresh time
+                    $('#last-update-time').text('(Last updated: ' + new Date().toLocaleTimeString() + ')');
+                }
+            },
+            error: function(xhr, status, error) {
+                console.error('Error fetching recent scans:', error);
+            }
+        });
+    }
+    
+    // Format time to display nicely (converts "14:30:00" to "2:30 PM")
+    function formatTime(timeString) {
+        const date = new Date();
+        const timeParts = timeString.split(':');
+        date.setHours(parseInt(timeParts[0], 10));
+        date.setMinutes(parseInt(timeParts[1], 10));
+        
+        return date.toLocaleTimeString([], {hour: 'numeric', minute:'2-digit', hour12: true});
+    }
+    
+    // Initial call to load recent scans
+    refreshRecentScans();
+    
+    // Set interval to refresh recent scans every 2 seconds
+    setInterval(refreshRecentScans, 2000);
 });
 </script>
 <?php require_once '../../includes/admin/footer.php'; ?>

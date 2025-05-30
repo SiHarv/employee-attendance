@@ -64,9 +64,6 @@ $late_time = date('h:i A', strtotime($settings['set_am_time_in']) + ($threshold_
                                 <strong>Late After:</strong> <?php echo $late_time; ?> 
                                 (<?php echo $threshold_minute; ?> min threshold)
                             </p>
-                            <p class="mb-0" id="current-time-display">
-                                <strong>Current Time:</strong> <span id="live-clock"></span>
-                            </p>
                         </div>
                         <!-- Scanner -->
                         <div class="row">
@@ -148,8 +145,9 @@ $late_time = date('h:i A', strtotime($settings['set_am_time_in']) + ($threshold_
     </div>
 </div>
 
-<!-- Instascan library -->
+<!-- Library scripts - must appear before our custom JS -->
 <script src="https://rawgit.com/schmich/instascan-builds/master/instascan.min.js"></script>
+<script src="../../assets/js/lib/sweetalert2.all.min.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const startButton = document.getElementById('startButton');
@@ -157,7 +155,6 @@ document.addEventListener('DOMContentLoaded', function() {
     const cameraSelect = document.getElementById('cameraSelect');
     const scanResult = document.getElementById('scan-result');
     const preview = document.getElementById('preview');
-    const liveClockElement = document.getElementById('live-clock');
     let scanner = null;
     let scanMode = 'in'; // 'in' or 'out'
     let sessionMode = 'am'; // 'am' or 'pm'
@@ -169,23 +166,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Get AM time out from PHP
     const amTimeOutSetting = "<?php echo $set_am_time_out; ?>";
 
-    // Initialize live clock
-    function updateLiveClock() {
-        const now = new Date();
-        // Format to consistently show only hours and minutes in 12-hour format with AM/PM
-        const hours = now.getHours() % 12 || 12; // Convert 0 to 12 for 12 AM
-        const minutes = now.getMinutes().toString().padStart(2, '0');
-        const ampm = now.getHours() >= 12 ? 'PM' : 'AM';
-        const timeString = `${hours}:${minutes} ${ampm}`;
-        
-        if(liveClockElement) {
-            liveClockElement.textContent = timeString;
-        }
-    }
-    
-    // Start live clock
-    updateLiveClock();
-    setInterval(updateLiveClock, 1000);
+    // Remove live clock functions and references
 
     function getCurrentTimeStr() {
         const now = new Date();
@@ -221,8 +202,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     // Update UI to reflect current mode
                     updateScanModeUI();
                     
-                    // DO NOT update the live clock from server response - only use JavaScript clock
-                    // REMOVED: liveClockElement.textContent = data.formatted_time;
+                    // Removed time display update code
                     
                     // If the mode changed, we could also show a notification
                     if (previousSessionMode !== sessionMode || previousScanMode !== scanMode) {
@@ -330,8 +310,26 @@ document.addEventListener('DOMContentLoaded', function() {
                 return;
             }
             if (data.success) {
-                showScanResult('success', data.message + (data.time ? '<br><b>Time:</b> ' + data.time : ''));
-                refreshRecentScans(); // Immediately refresh scans
+                // Check if status is 'late' for time-in operations
+                if (scanMode === 'in' && data.status === 'late') {
+                    // Use SweetAlert2 to show a more noticeable notification for late employees
+                    Swal.fire({
+                        title: 'Employee Late!',
+                        html: `<strong>${data.employeeName}</strong> is marked as <strong>LATE</strong>.<br>
+                               <span class="text-danger">Time: ${data.time}</span>`,
+                        icon: 'warning',
+                        confirmButtonText: 'OK',
+                        timer: 5000,
+                        timerProgressBar: true,
+                        background: '#ffe0e0',
+                        iconColor: '#d33'
+                    });
+                } else {
+                    // Use a simpler notification for on-time or time out events
+                    showScanResult('success', data.message + (data.time ? '<br><b>Time:</b> ' + data.time : ''));
+                }
+                // Refresh scans table immediately
+                refreshRecentScans();
             } else if (data.comebackTime) {
                 showScanResult('info', data.message + '<br><b>Come back at:</b> ' + data.comebackTime);
                 if (data.message) console.error('Scan error:', data.message);

@@ -48,7 +48,7 @@ if (!$settings) {
 $set_am_time_out = $settings['set_am_time_out'];
 $threshold_minute = $settings['threshold_minute'];
 
-// Format times for display
+// Format times for display (Update the PHP time formatting)
 $am_expected_time = date('h:i A', strtotime($settings['set_am_time_in']));
 $am_late_time = date('h:i A', strtotime($settings['set_am_time_in']) + ($threshold_minute * 60));
 $pm_expected_time = date('h:i A', strtotime($settings['set_pm_time_in']));
@@ -115,10 +115,18 @@ $pm_late_time = date('h:i A', strtotime($settings['set_pm_time_in']) + ($thresho
                                             <?php while ($scan = $recent_scans->fetch_assoc()): ?>
                                                 <tr>
                                                     <td><?php echo htmlspecialchars($scan['username']); ?></td>
-                                                    <td><?php echo date('h:i A', strtotime($scan['time_in'])); ?></td>
-                                                    <td>
-                                                        <?php echo $scan['time_out'] ? date('h:i A', strtotime($scan['time_out'])) : '-'; ?>
-                                                    </td>
+                                                    <td><?php 
+                                                        $time_in = new DateTime($scan['time_in']);
+                                                        echo $time_in->format('g:i A'); 
+                                                    ?></td>
+                                                    <td><?php 
+                                                        if ($scan['time_out']) {
+                                                            $time_out = new DateTime($scan['time_out']);
+                                                            echo $time_out->format('g:i A');
+                                                        } else {
+                                                            echo '-';
+                                                        }
+                                                    ?></td>
                                                     <td>
                                                         <?php if ($scan['source'] === 'morning'): ?>
                                                             <span class="badge bg-primary">Morning</span>
@@ -429,7 +437,9 @@ document.addEventListener('DOMContentLoaded', function() {
                     if (data.scans.length > 0) {
                         // Add each scan to the table
                         $.each(data.scans, function(index, scan) {
-                            var timeOut = scan.time_out ? formatTime(scan.time_out) : '-';
+                            var timeIn = formatTime(scan.time_in);
+                            var timeOut = formatTime(scan.time_out);
+                            
                             var periodBadge = scan.source === 'morning' ? 
                                 '<span class="badge bg-primary">Morning</span>' : 
                                 '<span class="badge bg-warning text-dark">Afternoon</span>';
@@ -439,8 +449,8 @@ document.addEventListener('DOMContentLoaded', function() {
                             
                             var row = '<tr>' + 
                                 '<td>' + scan.username + '</td>' +
-                                '<td>' + formatTime(scan.time_in) + '</td>' +
-                                '<td>' + timeOut + '</td>' +
+                                '<td>' + timeIn + '</td>' +
+                                '<td>' + (scan.time_out ? timeOut : '-') + '</td>' +
                                 '<td>' + periodBadge + '</td>' +
                                 '<td>' + statusBadge + '</td>' +
                                 '</tr>';
@@ -462,14 +472,28 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
-    // Format time to display nicely (converts "14:30:00" to "2:30 PM")
+    // Updated formatTime function for AJAX refresh
     function formatTime(timeString) {
-        const date = new Date();
-        const timeParts = timeString.split(':');
-        date.setHours(parseInt(timeParts[0], 10));
-        date.setMinutes(parseInt(timeParts[1], 10));
-        
-        return date.toLocaleTimeString([], {hour: 'numeric', minute:'2-digit', hour12: true});
+        if (!timeString) return '-';
+        try {
+            // Support both date-time and time-only formats
+            const time = timeString.includes(' ') ? timeString.split(' ')[1] : timeString;
+            const [hours, minutes] = time.split(':');
+            
+            // Ensure hours is treated as a number
+            let hour = parseInt(hours, 10);
+            let ampm = hour >= 12 ? 'PM' : 'AM';
+            
+            // Convert to 12-hour format
+            hour = hour % 12;
+            hour = hour ? hour : 12; // Convert 0 to 12
+            
+            // Format the final time string
+            return `${hour}:${minutes.padStart(2, '0')} ${ampm}`;
+        } catch (e) {
+            console.error('Error formatting time:', timeString, e);
+            return timeString;
+        }
     }
     
     // Initial call to load recent scans

@@ -399,7 +399,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 option.value = camera.id;
                 option.text = camera.name || `Camera ${idx + 1}`;
                 // Set Camera 3 as default if available
-                if (idx === 2) {
+                if (idx === 3) {
                     option.selected = true;
                 }
                 cameraSelect.appendChild(option);
